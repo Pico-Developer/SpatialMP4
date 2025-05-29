@@ -66,7 +66,8 @@ cmake .. -DBUILD_TESTING=ON
 make -j$(nproc)
 
 # 运行测试
-./test_reader
+cd ..
+./build/test_reader
 ```
 
 ## 📖 使用指南
