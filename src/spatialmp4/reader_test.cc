@@ -1,0 +1,217 @@
+#include <gtest/gtest.h>
+#include "spatialmp4/reader.h"
+#include "spatialmp4/data_types.h"
+#include "spatialmp4/utils.h"
+#include "utilities/OpencvUtils.h"
+#include "utilities/RgbdUtils.h"
+#include "utilities/PointcloudUtils.h"
+#include "spdlog/spdlog.h"
+#include <sophus/se3.hpp>
+#include <experimental/filesystem>
+
+namespace fs = std::experimental::filesystem;
+
+const std::string kTestFile = "/home/duino/ws/mp4/3DVideo_2025-05-28-22-42-28-894.mp4";  // 1/8
+const std::string kVisRgbDir = "./tmp_vis_rgb";
+const std::string kVisDepthDir = "./tmp_vis_depth";
+
+TEST(SpatialMP4Test, Basic_ReaderTest) {
+  SpatialML::Reader reader(kTestFile);
+  ASSERT_TRUE(reader.HasRGB());
+  ASSERT_TRUE(reader.HasDepth());
+  ASSERT_TRUE(reader.HasPose());
+  ASSERT_TRUE(reader.HasAudio());
+  ASSERT_TRUE(reader.HasDisparity());
+
+  auto rgb_intrinsics_left = reader.GetRgbIntrinsicsLeft();
+  auto rgb_intrinsics_right = reader.GetRgbIntrinsicsRight();
+  auto rgb_extrinsics_left = reader.GetRgbExtrinsicsLeft();
+  auto rgb_extrinsics_right = reader.GetRgbExtrinsicsRight();
+  auto depth_intrinsics = reader.GetDepthIntrinsics();
+  auto depth_extrinsics = reader.GetDepthExtrinsics();
+  std::cout << "rgb_intrinsics_left: " << rgb_intrinsics_left << std::endl;
+  std::cout << "rgb_intrinsics_right: " << rgb_intrinsics_right << std::endl;
+  std::cout << "rgb_extrinsics_left: " << rgb_extrinsics_left << std::endl;
+  std::cout << "rgb_extrinsics_right: " << rgb_extrinsics_right << std::endl;
+  std::cout << "depth_intrinsics: " << depth_intrinsics << std::endl;
+  std::cout << "depth_extrinsics: " << depth_extrinsics << std::endl;
+  for (auto pose_frame : reader.GetPoseFrames()) {
+    std::cout << pose_frame << std::endl;
+  }
+
+  // get first frame accurate timestamp
+  uint64_t start_timestamp = reader.GetStartTimestamp();
+  ASSERT_GT(start_timestamp, 0);
+
+  float duration = reader.GetDuration();
+  ASSERT_GT(duration, 0);
+
+  float rgb_fps = reader.GetRgbFPS();
+  ASSERT_GT(rgb_fps, 0);
+
+  int rgb_width = reader.GetRgbWidth();
+  ASSERT_GT(rgb_width, 0);
+
+  int rgb_height = reader.GetRgbHeight();
+  ASSERT_GT(rgb_height, 0);
+
+  float depth_fps = reader.GetDepthFPS();
+  ASSERT_GT(depth_fps, 0);
+
+  int depth_width = reader.GetDepthWidth();
+  ASSERT_GT(depth_width, 0);
+
+  int depth_height = reader.GetDepthHeight();
+  ASSERT_GT(depth_height, 0);
+}
+
+TEST(SpatialMP4Test, DepthFirst_ReaderTest) {
+  // spdlog::set_level(spdlog::level::debug); // 调试模式开启DEBUG级别
+
+  if (fs::exists(kVisDepthDir)) {
+    fs::remove_all(kVisDepthDir);
+  }
+  fs::create_directory(kVisDepthDir);
+
+  SpatialML::Reader reader(kTestFile);
+  reader.SetReadMode(SpatialML::Reader::ReadMode::DEPTH_FIRST);
+  reader.Reset();
+  while (reader.HasNext()) {
+    SpatialML::rgb_frame rgb_frame;
+    SpatialML::depth_frame depth_frame;
+    reader.Load(rgb_frame, depth_frame);
+
+    std::cout << "depth frame: \t" << depth_frame.timestamp << ", rgb frame: \t" << rgb_frame.timestamp << std::endl;
+    std::stringstream ss;
+    ss << std::setw(4) << std::setfill('0') << reader.GetIndex();
+
+    depth_frame.depth.setTo(0, depth_frame.depth > 10);
+    cv::Mat vis_depth;
+    Utilities::VisualizeMat(depth_frame.depth, vis_depth, "depth");
+    cv::rotate(vis_depth, vis_depth, cv::ROTATE_90_CLOCKWISE);
+
+    // resize depth_frame height alias to rgb_frame.left_rgb height
+    float factor = static_cast<float>(rgb_frame.left_rgb.rows) / static_cast<float>(vis_depth.rows);
+    cv::resize(vis_depth, vis_depth, cv::Size(vis_depth.cols * factor, vis_depth.rows * factor));
+    vis_depth.convertTo(vis_depth, CV_8UC3);
+
+    cv::Mat concat_mat;
+    cv::hconcat(rgb_frame.left_rgb.clone(), vis_depth.clone(), concat_mat);
+
+    // project depth to rgb
+    cv::Mat projected_depth;
+    auto T_I_Srgb = reader.GetRgbExtrinsicsLeft().as_se3();
+    auto T_I_Stof = reader.GetDepthExtrinsics().as_se3();
+
+    // Read head_model_offset from /system/etc/pvr/config/config_head.txt#line_1
+    auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
+
+    auto T_W_Hrgb = rgb_frame.pose.as_se3();
+    auto T_W_Htof = depth_frame.pose.as_se3();
+    Sophus::SE3d T_W_Irgb, T_W_Itof;
+    Utilities::HeadToImu(T_W_Hrgb, head_model_offset, T_W_Irgb);
+    Utilities::HeadToImu(T_W_Htof, head_model_offset, T_W_Itof);
+    auto T_W_Srgb = T_W_Irgb * T_I_Srgb;
+    auto T_W_Stof = T_W_Itof * T_I_Stof;
+    auto T_Srgb_Stof = T_W_Srgb.inverse() * T_W_Stof;
+
+    Utilities::ProjectDepthToRgb(depth_frame.depth, rgb_frame.left_rgb, reader.GetRgbIntrinsicsLeft().as_cvmat(),
+                                 reader.GetDepthIntrinsics().as_cvmat(), T_Srgb_Stof, projected_depth, true);
+    cv::Mat vis_projected_depth;
+    Utilities::VisualizeMat(projected_depth, vis_projected_depth, "projected_depth", &rgb_frame.left_rgb, 0, 5, true);
+    cv::hconcat(concat_mat, vis_projected_depth, concat_mat);
+
+    std::string filename = kVisDepthDir + "/depth_" + ss.str() + ".png";
+    cv::putText(concat_mat, "rgb_" + std::to_string(rgb_frame.timestamp), cv::Point(100, 100), cv::FONT_HERSHEY_SIMPLEX,
+                1, cv::Scalar(0, 0, 255), 2);
+    cv::putText(concat_mat, "depth_" + std::to_string(depth_frame.timestamp), cv::Point(100, 150),
+                cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+    cv::imwrite(filename, concat_mat);
+
+    // projection depth to pointcloud
+    Utilities::Pointcloud pcd;
+    Utilities::RgbdToPointcloud(rgb_frame.left_rgb, projected_depth, reader.GetRgbIntrinsicsLeft().as_cvmat(), pcd, 10);
+    std::string pcd_filename = kVisDepthDir + "/pcd_" + ss.str() + ".obj";
+    Utilities::SavePointcloudToFile(pcd_filename, pcd);
+
+    EXPECT_TRUE(depth_frame.depth.data != nullptr);
+    EXPECT_TRUE(rgb_frame.left_rgb.data != nullptr);
+    EXPECT_TRUE(rgb_frame.right_rgb.data != nullptr);
+  }
+}
+
+TEST(SpatialMP4Test, HeadModel_ReaderTest) {
+  // 测试数据
+  auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
+
+  // 创建原始IMU变换
+  Sophus::SE3d T_imu;
+  T_imu.translation() = Eigen::Vector3d(1, 2, 3);
+  T_imu.setQuaternion(Eigen::Quaterniond(0.5, 0.5, 0.5, 0.5));
+
+  auto T_head = Utilities::ApplyHeadModel(T_imu, head_model_offset);
+  auto T_imu_back = Utilities::ReleaseHeadModel(T_head, head_model_offset);
+
+  // 验证结果
+  EXPECT_TRUE(T_imu.translation().isApprox(T_imu_back.translation(), 1e-6));
+  EXPECT_TRUE(T_imu.unit_quaternion().isApprox(T_imu_back.unit_quaternion(), 1e-6));
+}
+
+TEST(SpatialMP4Test, RgbOnly_ReaderTest) {
+  SpatialML::Reader reader(kTestFile);
+  ASSERT_TRUE(reader.HasRGB());
+  reader.Reset();
+  reader.SetReadMode(SpatialML::Reader::ReadMode::RGB_ONLY);
+  while (reader.HasNext()) {
+    SpatialML::rgb_frame rgb_frame;
+    reader.Load(rgb_frame);
+    std::cout << "rgb frame: " << rgb_frame << std::endl;
+    cv::imwrite("vis_rgb/rgb_" + std::to_string(rgb_frame.timestamp) + ".png", rgb_frame.left_rgb);
+    EXPECT_TRUE(rgb_frame.left_rgb.data != nullptr);
+    EXPECT_TRUE(rgb_frame.right_rgb.data != nullptr);
+  }
+}
+
+TEST(SpatialMP4Test, DepthOnly_ReaderTest) {
+  SpatialML::Reader reader(kTestFile);
+  ASSERT_TRUE(reader.HasDepth());
+  reader.Reset();
+  reader.SetReadMode(SpatialML::Reader::ReadMode::DEPTH_ONLY);
+  while (reader.HasNext()) {
+    SpatialML::depth_frame depth_frame;
+    reader.Load(depth_frame);
+    std::cout << "depth frame: " << depth_frame << std::endl;
+    EXPECT_TRUE(depth_frame.depth.data != nullptr);
+  }
+}
+
+TEST(SpatialMP4Test, RandomAccess_ReaderTest) {
+  spdlog::set_level(spdlog::level::debug);  // 调试模式开启DEBUG级别
+
+  SpatialML::RandomAccessVideoReader reader;
+  if (!reader.Open(kTestFile, true)) {
+    std::cerr << "Failed to open video" << std::endl;
+    return;
+  }
+  int frame_count = reader.GetFrameCount();
+
+  // reader.Debug();
+  // AVFrame* frame = reader.GetFrame(0);
+  // frame = reader.GetFrame(1);
+  // frame = reader.GetFrame(10);
+  // frame = reader.GetFrame(800);
+
+  for (int i = 0; i < frame_count; i += 10) {
+    AVFrame* frame = reader.GetFrame(i);
+    if (frame != nullptr) {
+      std::pair<cv::Mat, cv::Mat> rgb_mats;
+      SpatialML::FrameToBGR24(frame, rgb_mats);
+      cv::putText(rgb_mats.first, std::to_string(i) + "_" + std::to_string(frame->pts), cv::Point(100, 100),
+                  cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+
+      std::stringstream ss;
+      ss << std::setw(4) << std::setfill('0') << i;
+      cv::imwrite("vis_rgb/" + ss.str() + "_" + std::to_string(frame->pts) + ".png", rgb_mats.first);
+    }
+  }
+}
