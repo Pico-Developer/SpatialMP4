@@ -1,0 +1,301 @@
+diff --git a/libavcodec/codec_desc.c b/libavcodec/codec_desc.c
+index 88fed478a3..da7e15c3c5 100644
+--- a/libavcodec/codec_desc.c
++++ b/libavcodec/codec_desc.c
+@@ -3774,6 +3774,12 @@ static const AVCodecDescriptor codec_descriptors[] = {
+         .name      = "anull",
+         .long_name = NULL_IF_CONFIG_SMALL("Null audio codec"),
+     },
++    /* Custom for spatial video */
++    {
++        .id        = AV_CODEC_ID_METT_DISPARITY,
++        .name      = "disparity",
++        .long_name = NULL_IF_CONFIG_SMALL("Disparity codec"),
++    },
+ };
+ 
+ static int descriptor_compare(const void *key, const void *member)
+diff --git a/libavcodec/codec_id.h b/libavcodec/codec_id.h
+index be0a65bcb9..977ecdbb11 100644
+--- a/libavcodec/codec_id.h
++++ b/libavcodec/codec_id.h
+@@ -620,6 +620,11 @@ enum AVCodecID {
+      * Null encoder/decoder discard all input and never return any output.
+      */
+     AV_CODEC_ID_ANULL,
++
++    /**
++     * Custom spatialmp4 codec.
++     **/
++    AV_CODEC_ID_METT_DISPARITY,
+ };
+ 
+ /**
+diff --git a/libavformat/mov.c b/libavformat/mov.c
+index 8a094b1ea0..c6ccf5ee03 100644
+--- a/libavformat/mov.c
++++ b/libavformat/mov.c
+@@ -86,6 +86,10 @@ typedef struct MOVParseTableEntry {
+ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom);
+ static int mov_read_mfra(MOVContext *c, AVIOContext *f);
+ static void mov_free_stream_context(AVFormatContext *s, AVStream *st);
++static int mov_read_icam(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // camera intrinsics
++static int mov_read_ecam(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // camera extrinsic
++static int mov_read_dstr(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // distortion
++static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // timebase
+ 
+ static int mov_metadata_track_or_disc_number(MOVContext *c, AVIOContext *pb,
+                                              unsigned len, const char *key)
+@@ -2887,6 +2891,17 @@ static int mov_parse_stsd_data(MOVContext *c, AVIOContext *pb,
+                 }
+             }
+         }
++    } else if (st->codecpar->codec_tag == MKTAG('m','e','t','t')) {
++        if (size < 20) {
++            avio_skip(pb, size);
++        } else {
++            char mime[20];
++            size -= avio_get_str(pb, size, mime, 20);
++            avio_skip(pb, size);
++            if (strstr(mime, "disparity") != NULL) {
++                st->codecpar->codec_id = AV_CODEC_ID_METT_DISPARITY;
++            }
++        }
+     } else {
+         /* other codec type, just skip (rtp, mp4s ...) */
+         avio_skip(pb, size);
+@@ -9323,6 +9338,10 @@ static const MOVParseTableEntry mov_default_parse_table[] = {
+ #if CONFIG_IAMFDEC
+ { MKTAG('i','a','c','b'), mov_read_iacb },
+ #endif
++{ MKTAG('i','c','a','m'), mov_read_icam },
++{ MKTAG('e','c','a','m'), mov_read_ecam },
++{ MKTAG('d','s','t','r'), mov_read_dstr },
++{ MKTAG('t','b','t','m'), mov_read_tbtm },
+ { 0, NULL }
+ };
+ 
+@@ -9344,6 +9363,9 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+         int (*parse)(MOVContext*, AVIOContext*, MOVAtom) = NULL;
+         a.size = avio_rb32(pb);
+         a.type = avio_rl32(pb);
++
++        // av_log(c->fc, AV_LOG_INFO, "Found box: type='%s' size=%"PRId64" parent='%s'\n", av_fourcc2str(a.type), a.size, av_fourcc2str(atom.type));
++
+         if (avio_feof(pb))
+             break;
+         if (((a.type == MKTAG('f','r','e','e') && c->moov_retry) ||
+@@ -9448,6 +9470,213 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+     return 0;
+ }
+ 
++static int mov_read_icam(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++{
++    if (!c || !c->fc) {
++        av_log(NULL, AV_LOG_ERROR, "Invalid context for ICAM box\n");
++        return AVERROR_INVALIDDATA;
++    }
++
++    avio_rb32(pb);  // writeInt32(0)
++    // view_id: 0(left), 1(right)
++    int16_t view_id = avio_rb16(pb);  // writeInt16(view_id)
++    view_id &= 0x3FF;
++    avio_rb32(pb);  // writeInt32(31)
++    avio_rb32(pb);  // writeInt32(31)
++    avio_rb32(pb);  // writeInt32(31)
++
++    // TODO: revemo hard code for num_doubles
++    // int64_t remaining = atom->size - (4 + 2 + 4 + 4 + 4); // 减去已读取的字节数
++    // int num_doubles = remaining / (1 + sizeof(double)); // 每个值包含1字节指数和8字节尾数
++    int num_doubles = 4;     // remaining / (1 + sizeof(double)); // 每个值包含1字节指数和8字节尾数
++
++    // create a buffer to store all double values
++    char *value_str = av_malloc(num_doubles * 32); // each double has at most 32 characters
++    if (!value_str) {
++        return AVERROR(ENOMEM);
++    }
++    value_str[0] = '\0';
++
++    // read all (double) values
++    for (int i = 0; i < num_doubles; i++) {
++        int8_t exponent = avio_r8(pb);
++        double mantissa;
++        int ret = avio_read(pb, (uint8_t*)&mantissa, sizeof(double));
++        if (ret != sizeof(double)) {
++            return AVERROR_INVALIDDATA;
++        }
++        // convert the mantissa and exponent back to double
++        double dvalue = ldexp(mantissa, exponent);
++
++        char temp[32];
++        snprintf(temp, sizeof(temp), "%f,", dvalue);
++        strcat(value_str, temp);
++    }
++    // remove the last comma
++    if (strlen(value_str) > 0) {
++        value_str[strlen(value_str) - 1] = '\0';
++    }
++    av_log(c->fc, AV_LOG_DEBUG, "ICAM box: value=%s\n", value_str);
++    AVStream *st = c->fc->streams[c->fc->nb_streams-1];
++    char keyname[32];
++    snprintf(keyname, sizeof(keyname), "icam_%d", view_id);
++    av_dict_set(&st->metadata, keyname, value_str, AV_DICT_IGNORE_SUFFIX);
++    av_freep(&value_str);
++    return 0;
++}
++
++static int mov_read_ecam(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++{
++    if (!c || !c->fc) {
++        av_log(NULL, AV_LOG_ERROR, "Invalid context for ECAM box\n");
++        return AVERROR_INVALIDDATA;
++    }
++
++    avio_rb32(pb);  // writeInt32(0)
++    // view_id: 0(left), 1(right)
++    int16_t view_id = avio_rb16(pb);  // writeInt16(view_id)
++    view_id &= 0x3FF;
++    avio_r8(pb);  // writeInt8(31)
++    avio_r8(pb);  // writeInt8(31)
++
++    // TODO: revemo hard code for num_doubles
++    // int64_t remaining = atom->size - (4 + 2 + 1 + 1); // 减去已读取的字节数
++    // int num_doubles = remaining / (1 + sizeof(double)); // 每个值包含1字节指数和8字节尾数
++    int num_doubles = 12;     // remaining / (1 + sizeof(double)); // 每个值包含1字节指数和8字节尾数
++
++    // create a buffer to store all double values
++    char *value_str = av_malloc(num_doubles * 32); // each double has at most 32 characters
++    if (!value_str) {
++        return AVERROR(ENOMEM);
++    }
++    value_str[0] = '\0';
++
++    // read all (double) values
++    for (int i = 0; i < num_doubles; i++) {
++        int8_t exponent = avio_r8(pb);
++        double mantissa;
++        int ret = avio_read(pb, (uint8_t*)&mantissa, sizeof(double));
++        if (ret != sizeof(double)) {
++            return AVERROR_INVALIDDATA;
++        }
++        // convert the mantissa and exponent back to double
++        double dvalue = ldexp(mantissa, exponent);
++
++        char temp[32];
++        snprintf(temp, sizeof(temp), "%f,", dvalue);
++        strcat(value_str, temp);
++    }
++    // remove the last comma
++    if (strlen(value_str) > 0) {
++        value_str[strlen(value_str) - 1] = '\0';
++    }
++    av_log(c->fc, AV_LOG_DEBUG, "ECAM box: value=%s\n", value_str);
++    AVStream *st = c->fc->streams[c->fc->nb_streams-1];
++    char keyname[32];
++    snprintf(keyname, sizeof(keyname), "ecam_%d", view_id);
++    av_dict_set(&st->metadata, keyname, value_str, AV_DICT_IGNORE_SUFFIX);
++    av_freep(&value_str);
++    return 0;
++}
++
++static int mov_read_dstr(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++{
++    if (!c || !c->fc) {
++        av_log(NULL, AV_LOG_ERROR, "Invalid context for DSTR box\n");
++        return AVERROR_INVALIDDATA;
++    }
++
++    // Read version/flags (int32)
++    avio_rb32(pb);
++    int64_t bytes_read = 4;
++
++    // Read distortion model string
++    char distortion_model[256];
++    int ret = avio_get_str(pb, sizeof(distortion_model), distortion_model, sizeof(distortion_model));
++    if (ret < 0) {
++        return ret;
++    }
++    bytes_read += strlen(distortion_model) + 1; // +1 for null terminator
++
++    // Read camera model string
++    char camera_model[256];
++    ret = avio_get_str(pb, sizeof(camera_model), camera_model, sizeof(camera_model));
++    if (ret < 0) {
++        return ret;
++    }
++    bytes_read += strlen(camera_model) + 1; // +1 for null terminator
++    av_log(c->fc, AV_LOG_INFO, "DSTR box: distortion_model=%s, camera_model=%s\n", distortion_model, camera_model);
++
++    // Read any additional data
++    // int64_t remaining_data_size = atom->size - bytes_read;
++    int64_t dist_coeff_size;
++    if (strcmp(distortion_model, "equidistant") == 0) {
++        dist_coeff_size = 4;
++    } else if (strcmp(distortion_model, "brown") == 0) {
++        dist_coeff_size = 5;
++    } else if (strcmp(distortion_model, "equiDis62") == 0) {
++        dist_coeff_size = 8;
++    } else {
++        av_log(c->fc, AV_LOG_ERROR, "DSTR box: unknown distortion model: %s\n", distortion_model);
++        return AVERROR_INVALIDDATA;
++    }
++    char *value_str = av_malloc(dist_coeff_size * 32); // each double has at most 32 characters
++    if (!value_str) {
++        return AVERROR(ENOMEM);
++    }
++    value_str[0] = '\0';
++    int64_t remaining_data_size = sizeof(double) * dist_coeff_size;
++    double *additional_data = NULL;
++    if (remaining_data_size > 0) {
++        additional_data = av_malloc(remaining_data_size);
++        if (!additional_data) {
++            return AVERROR(ENOMEM);
++        }
++        ret = avio_read(pb, (uint8_t*)additional_data, remaining_data_size);
++        if (ret != remaining_data_size) {
++            av_freep(&additional_data);
++            return AVERROR_INVALIDDATA;
++        }
++        // av_log(c->fc, AV_LOG_INFO, "DSTR box: additional_data=%f, %f, %f, %f\n", additional_data[0], additional_data[1], additional_data[2], additional_data[3]);
++
++    }
++    for (int i = 0; i < dist_coeff_size; i++) {
++        char temp[32];
++        snprintf(temp, sizeof(temp), "%f,", additional_data[i]);
++        strcat(value_str, temp);
++    }
++    if (strlen(value_str) > 0) {
++        value_str[strlen(value_str) - 1] = '\0';
++    }
++    av_log(c->fc, AV_LOG_DEBUG, "DSTR box: %s\n", value_str);
++    
++    AVStream *st = c->fc->streams[c->fc->nb_streams-1];
++    
++    // Store individual components in metadata
++    av_dict_set(&st->metadata, "camera_model", camera_model, 0);
++    av_dict_set(&st->metadata, "distortion_model", distortion_model, 0);
++    av_dict_set(&st->metadata, "distortion_params", value_str, 0);
++    
++    av_freep(&value_str);
++    av_freep(&additional_data);
++    return 0;
++}
++
++static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++{   
++    if (!c || !c->fc) {
++        av_log(NULL, AV_LOG_ERROR, "Invalid context for TBTM box\n");
++        return AVERROR_INVALIDDATA;
++    }
++    uint64_t timebase = avio_rb64(pb);
++    // av_log(c->fc, AV_LOG_INFO, "TBTM box: timebase=%lld\n", timebase);
++    AVStream *st = c->fc->streams[c->fc->nb_streams-1];
++    char timebase_str[32];
++    snprintf(timebase_str, sizeof(timebase_str), "%ld", timebase);
++    av_dict_set(&st->metadata, "timebase", timebase_str, 0);
++    return 0;
++}
++
+ static int mov_probe(const AVProbeData *p)
+ {
+     int64_t offset;

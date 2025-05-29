@@ -42,6 +42,12 @@ cd SpatialMP4
 
 ### 2. 创建构建目录
 
+首先需要本地编译`ffmpeg`.
+
+```bash
+bash scripts/build_ffmpeg.sh
+```
+
 ```bash
 mkdir build && cd build
 ```

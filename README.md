@@ -42,6 +42,12 @@ cd SpatialMP4
 
 ### 2. Create Build Directory
 
+Build `ffmpeg` first.
+
+```bash
+bash scripts/build_ffmpeg.sh
+```
+
 ```bash
 mkdir build && cd build
 ```

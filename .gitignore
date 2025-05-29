@@ -37,3 +37,6 @@
 
 tmp*
 build/*
+
+# ffmpeg build
+scripts/build_ffmpeg
