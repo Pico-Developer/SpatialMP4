@@ -11,5 +11,6 @@ repos:
     - id: insert-license
       name: "Insert license header in C++ source files"
       args: [--license-filepath=docs/legal_header.txt,
-          '--comment-style=/*| *| */', --detect-license-in-X-top-lines=16]
+             '--comment-style=/*| *| */',
+             --detect-license-in-X-top-lines=16]
       types_or: [c, c++, objective-c]
