@@ -27,8 +27,9 @@
 
 namespace fs = std::experimental::filesystem;
 
-const std::string kTestFile = "/home/duino/ws/mp4/3DVideo_2025-05-28-22-42-28-894.mp4";  // 1/8
+const std::string kTestFile = "video/test.mp4";
 const std::string kVisRgbDir = "./tmp_vis_rgb";
+const std::string kVisRgbDir2 = "./tmp_vis_rgb_random";
 const std::string kVisDepthDir = "./tmp_vis_depth";
 
 TEST(SpatialMP4Test, Basic_ReaderTest) {
@@ -174,6 +175,11 @@ TEST(SpatialMP4Test, HeadModel_ReaderTest) {
 }
 
 TEST(SpatialMP4Test, RgbOnly_ReaderTest) {
+  if (fs::exists(kVisRgbDir)) {
+    fs::remove_all(kVisRgbDir);
+  }
+  fs::create_directory(kVisRgbDir);
+
   SpatialML::Reader reader(kTestFile);
   ASSERT_TRUE(reader.HasRGB());
   reader.Reset();
@@ -182,7 +188,7 @@ TEST(SpatialMP4Test, RgbOnly_ReaderTest) {
     SpatialML::rgb_frame rgb_frame;
     reader.Load(rgb_frame);
     std::cout << "rgb frame: " << rgb_frame << std::endl;
-    cv::imwrite("vis_rgb/rgb_" + std::to_string(rgb_frame.timestamp) + ".png", rgb_frame.left_rgb);
+    cv::imwrite(kVisRgbDir + "/rgb_" + std::to_string(rgb_frame.timestamp) + ".png", rgb_frame.left_rgb);
     EXPECT_TRUE(rgb_frame.left_rgb.data != nullptr);
     EXPECT_TRUE(rgb_frame.right_rgb.data != nullptr);
   }
@@ -202,7 +208,12 @@ TEST(SpatialMP4Test, DepthOnly_ReaderTest) {
 }
 
 TEST(SpatialMP4Test, RandomAccess_ReaderTest) {
-  spdlog::set_level(spdlog::level::debug);  // 调试模式开启DEBUG级别
+  // spdlog::set_level(spdlog::level::debug);  // 调试模式开启DEBUG级别
+
+  if (fs::exists(kVisRgbDir2)) {
+    fs::remove_all(kVisRgbDir2);
+  }
+  fs::create_directory(kVisRgbDir2);
 
   SpatialML::RandomAccessVideoReader reader;
   if (!reader.Open(kTestFile, true)) {
@@ -227,7 +238,7 @@ TEST(SpatialMP4Test, RandomAccess_ReaderTest) {
 
       std::stringstream ss;
       ss << std::setw(4) << std::setfill('0') << i;
-      cv::imwrite("vis_rgb/" + ss.str() + "_" + std::to_string(frame->pts) + ".png", rgb_mats.first);
+      cv::imwrite(kVisRgbDir2 + "/" + ss.str() + "_" + std::to_string(frame->pts) + ".png", rgb_mats.first);
     }
   }
 }
