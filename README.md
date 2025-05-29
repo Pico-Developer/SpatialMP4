@@ -40,7 +40,7 @@ git clone <repository-url>
 cd SpatialMP4
 ```
 
-### 2. Create Build Directory
+### 2. Build FFmpeg
 
 Build `ffmpeg` first.
 
@@ -48,13 +48,11 @@ Build `ffmpeg` first.
 bash scripts/build_ffmpeg.sh
 ```
 
-```bash
-mkdir build && cd build
-```
-
 ### 3. Configure and Build
 
 ```bash
+mkdir build && cd build
+
 # Configure project
 cmake .. -DCMAKE_BUILD_TYPE=Release
 

@@ -40,21 +40,17 @@ git clone <repository-url>
 cd SpatialMP4
 ```
 
-### 2. 创建构建目录
-
-首先需要本地编译`ffmpeg`.
+### 2. 编译FFmpeg
 
 ```bash
 bash scripts/build_ffmpeg.sh
 ```
 
-```bash
-mkdir build && cd build
-```
-
 ### 3. 配置和编译
 
 ```bash
+mkdir build && cd build
+
 # 配置项目
 cmake .. -DCMAKE_BUILD_TYPE=Release
 
