@@ -111,6 +111,13 @@ class Reader {
   std::vector<pose_frame> GetPoseFrames() const { return pose_frames_.getAllPose(); }
   int GetRgbKeyframeIndex() const { return keyframe_rgb_idx_; }
   int GetDepthKeyframeIndex() const { return keyframe_depth_idx_; }
+  bool IsRgbDistorted() const { return is_rgb_distorted_; }
+  std::string GetRgbDistortionModel() const { return rgb_distortion_model_; }
+  std::string GetRgbDistortionParams() const { return rgb_distortion_params_; }
+  std::string GetDepthDistortionModel() const { return depth_distortion_model_; }
+  std::string GetDepthDistortionParams() const { return depth_distortion_params_; }
+  uint64_t GetRgbTimebase() const { return rgb_timebase_; }
+  uint64_t GetDepthTimebase() const { return depth_timebase_; }
 
   void SetReadMode(ReadMode mode) { read_mode_ = mode; }
   bool HasNext() const;
@@ -149,6 +156,8 @@ class Reader {
   int audio_2_frame_id_;
   bool has_disparity_;
   int disparity_frame_id_;
+  uint64_t rgb_timebase_;
+  uint64_t depth_timebase_;
   uint64_t start_timestamp_;
   float duration_;
   float rgb_fps_;
@@ -163,6 +172,11 @@ class Reader {
   camera_extrinsics rgb_extrinsics_right_;
   camera_intrinsics depth_intrinsics_;
   camera_extrinsics depth_extrinsics_;
+  bool is_rgb_distorted_;
+  std::string rgb_distortion_model_;
+  std::string rgb_distortion_params_;
+  std::string depth_distortion_model_;
+  std::string depth_distortion_params_;
 
   std::vector<int64_t> keyframes_rgb;
   std::vector<int64_t> allframes_rgb;

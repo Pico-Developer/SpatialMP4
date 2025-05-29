@@ -44,4 +44,6 @@ bool FrameToBGR24(AVFrame* rgb_frame, std::pair<cv::Mat, cv::Mat>& rgb_pair);
 
 std::string FFmpegErrorString(int errnum);
 
+std::string microsecondsToDateTime(int64_t timestamp_microseconds);
+
 }  // namespace SpatialML

@@ -111,9 +111,9 @@ bool FrameToBGR24(AVFrame* rgb_frame, std::pair<cv::Mat, cv::Mat>& rgb_pair) {
     std::cerr << "rgb_frame is nullptr" << std::endl;
     return false;
   }
-  // 1. 检查帧格式
+  // 1. check frame format
   if (rgb_frame->format != AV_PIX_FMT_RGB24) {
-    // 创建转换上下文
+    // create conversion context
     SwsContext* sws_ctx =
         sws_getContext(rgb_frame->width, rgb_frame->height, (AVPixelFormat)rgb_frame->format, rgb_frame->width,
                        rgb_frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
@@ -124,7 +124,7 @@ bool FrameToBGR24(AVFrame* rgb_frame, std::pair<cv::Mat, cv::Mat>& rgb_pair) {
       return false;
     }
 
-    // 创建目标帧
+    // create target frame
     AVFrame* rgb24_frame = av_frame_alloc();
     rgb24_frame->format = AV_PIX_FMT_RGB24;
     rgb24_frame->width = rgb_frame->width;
@@ -136,24 +136,24 @@ bool FrameToBGR24(AVFrame* rgb_frame, std::pair<cv::Mat, cv::Mat>& rgb_pair) {
       sws_freeContext(sws_ctx);
       return false;
     }
-    // 转换格式
+    // convert format
     sws_scale(sws_ctx, rgb_frame->data, rgb_frame->linesize, 0, rgb_frame->height, rgb24_frame->data,
               rgb24_frame->linesize);
 
-    // 创建OpenCV Mat
+    // create OpenCV Mat
     cv::Mat mat(rgb24_frame->height, rgb24_frame->width, CV_8UC3, rgb24_frame->data[0], rgb24_frame->linesize[0]);
     cv::cvtColor(mat, mat, cv::COLOR_RGB2BGR);
 
-    // 分割左右图像
+    // split left and right images
     cv::Mat left_rgb = mat(cv::Rect(0, 0, mat.cols / 2, mat.rows)).clone();
     cv::Mat right_rgb = mat(cv::Rect(mat.cols / 2, 0, mat.cols / 2, mat.rows)).clone();
     rgb_pair = std::make_pair(left_rgb, right_rgb);
 
-    // 清理资源
+    // clean up resources
     av_frame_free(&rgb24_frame);
     sws_freeContext(sws_ctx);
   } else {
-    // 直接使用BGR24格式
+    // use BGR24 format directly
     cv::Mat mat(rgb_frame->height, rgb_frame->width, CV_8UC3, rgb_frame->data[0], rgb_frame->linesize[0]);
     cv::cvtColor(mat, mat, cv::COLOR_RGB2BGR);
     cv::Mat left_rgb = mat(cv::Rect(0, 0, mat.cols / 2, mat.rows)).clone();
@@ -170,5 +170,23 @@ std::string FFmpegErrorString(int errnum) {
   }
   return "unknown error: " + std::to_string(errnum);
 }
+
+std::string microsecondsToDateTime(int64_t timestamp_microseconds) {
+    // split seconds and microseconds
+    int64_t timestamp_seconds = timestamp_microseconds / 1000000;
+    int64_t microseconds = timestamp_microseconds % 1000000;
+    
+    // convert to time structure
+    std::time_t time = timestamp_seconds;
+    std::tm* tm = std::localtime(&time);
+    
+    // format output
+    std::ostringstream oss;
+    oss << std::put_time(tm, "%Y-%m-%d %H:%M:%S");
+    oss << "." << std::setfill('0') << std::setw(6) << microseconds;
+    
+    return oss.str();
+}
+
 
 }  // namespace SpatialML

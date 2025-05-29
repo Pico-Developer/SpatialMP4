@@ -52,13 +52,32 @@ TEST(SpatialMP4Test, Basic_ReaderTest) {
   std::cout << "rgb_extrinsics_right: " << rgb_extrinsics_right << std::endl;
   std::cout << "depth_intrinsics: " << depth_intrinsics << std::endl;
   std::cout << "depth_extrinsics: " << depth_extrinsics << std::endl;
+  std::cout << "is_rgb_distorted: " << (reader.IsRgbDistorted() ? "true" : "false") << std::endl;
+  std::cout << "rgb_distortion_model: " << reader.GetRgbDistortionModel() << std::endl;
+  std::cout << "rgb_distortion_params: " << reader.GetRgbDistortionParams() << std::endl;
+  std::cout << "depth_distortion_model: " << reader.GetDepthDistortionModel() << std::endl;
+  std::cout << "depth_distortion_params: " << reader.GetDepthDistortionParams() << std::endl;
+  std::cout << "rgb_timebase: " << SpatialML::microsecondsToDateTime(reader.GetRgbTimebase()) << std::endl;
+  std::cout << "depth_timebase: " << SpatialML::microsecondsToDateTime(reader.GetDepthTimebase()) << std::endl;
+  std::cout << "start_timestamp: " << reader.GetStartTimestamp() << std::endl;
+  std::cout << "duration: " << reader.GetDuration() << std::endl;
+
+  int pose_cnt = 0;
   for (auto pose_frame : reader.GetPoseFrames()) {
     std::cout << pose_frame << std::endl;
+    pose_cnt++;
+    if (pose_cnt > 10) {
+      std::cout << "Timestamp: ..." << std::endl;
+      break;
+    }
   }
 
   // get first frame accurate timestamp
-  uint64_t start_timestamp = reader.GetStartTimestamp();
-  ASSERT_GT(start_timestamp, 0);
+  uint64_t rgb_timebase = reader.GetRgbTimebase();
+  ASSERT_GT(rgb_timebase, 0);
+
+  uint64_t depth_timebase = reader.GetDepthTimebase();
+  ASSERT_GT(depth_timebase, 0);
 
   float duration = reader.GetDuration();
   ASSERT_GT(duration, 0);
@@ -83,7 +102,7 @@ TEST(SpatialMP4Test, Basic_ReaderTest) {
 }
 
 TEST(SpatialMP4Test, DepthFirst_ReaderTest) {
-  // spdlog::set_level(spdlog::level::debug); // 调试模式开启DEBUG级别
+  // spdlog::set_level(spdlog::level::debug); // debug mode
 
   if (fs::exists(kVisDepthDir)) {
     fs::remove_all(kVisDepthDir);
@@ -158,10 +177,10 @@ TEST(SpatialMP4Test, DepthFirst_ReaderTest) {
 }
 
 TEST(SpatialMP4Test, HeadModel_ReaderTest) {
-  // 测试数据
+  // test data
   auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
 
-  // 创建原始IMU变换
+  // create original IMU transform
   Sophus::SE3d T_imu;
   T_imu.translation() = Eigen::Vector3d(1, 2, 3);
   T_imu.setQuaternion(Eigen::Quaterniond(0.5, 0.5, 0.5, 0.5));
@@ -169,7 +188,7 @@ TEST(SpatialMP4Test, HeadModel_ReaderTest) {
   auto T_head = Utilities::ApplyHeadModel(T_imu, head_model_offset);
   auto T_imu_back = Utilities::ReleaseHeadModel(T_head, head_model_offset);
 
-  // 验证结果
+  // verify result
   EXPECT_TRUE(T_imu.translation().isApprox(T_imu_back.translation(), 1e-6));
   EXPECT_TRUE(T_imu.unit_quaternion().isApprox(T_imu_back.unit_quaternion(), 1e-6));
 }

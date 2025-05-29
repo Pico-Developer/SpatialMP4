@@ -235,6 +235,13 @@ Reader::Reader(const std::string& filename)
       has_pose_(false),
       has_audio_(false),
       has_disparity_(false),
+      rgb_timebase_(0),
+      depth_timebase_(0),
+      is_rgb_distorted_(false),
+      rgb_distortion_model_(""),
+      rgb_distortion_params_(""),
+      depth_distortion_model_(""),
+      depth_distortion_params_(""),
       start_timestamp_(0),
       duration_(0),
       rgb_fps_(0),
@@ -324,6 +331,13 @@ Reader::Reader(const std::string& filename)
             cv::Matx44d(extrinsics_data[0], extrinsics_data[1], extrinsics_data[2], extrinsics_data[3],
                         extrinsics_data[4], extrinsics_data[5], extrinsics_data[6], extrinsics_data[7],
                         extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11], 0, 0, 0, 1);
+      } else if (std::string(tag->key).find("distortion_model") != std::string::npos) {
+        is_rgb_distorted_ = true;
+        rgb_distortion_model_ = tag->value;
+      } else if (std::string(tag->key).find("distortion_params") != std::string::npos) {
+        rgb_distortion_params_ = tag->value;
+      } else if (std::string(tag->key).find("timebase") != std::string::npos) {
+        rgb_timebase_ = std::stoul(tag->value);
       }
     }
     AVPacket packet;
@@ -384,6 +398,12 @@ Reader::Reader(const std::string& filename)
             cv::Matx44d(extrinsics_data[0], extrinsics_data[1], extrinsics_data[2], extrinsics_data[3],
                         extrinsics_data[4], extrinsics_data[5], extrinsics_data[6], extrinsics_data[7],
                         extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11], 0, 0, 0, 1);
+      } else if (std::string(tag->key).find("distortion_model") != std::string::npos) {
+        depth_distortion_model_ = tag->value;
+      } else if (std::string(tag->key).find("distortion_params") != std::string::npos) {
+        depth_distortion_params_ = tag->value;
+      } else if (std::string(tag->key).find("timebase") != std::string::npos) {
+        depth_timebase_ = std::stoul(tag->value);
       }
     }
     AVPacket packet;
