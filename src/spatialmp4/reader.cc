@@ -239,9 +239,9 @@ Reader::Reader(const std::string& filename)
       depth_timebase_(0),
       is_rgb_distorted_(false),
       rgb_distortion_model_(""),
-      rgb_distortion_params_(""),
+      rgb_distortion_params_left_(""),
+      rgb_distortion_params_right_(""),
       depth_distortion_model_(""),
-      depth_distortion_params_(""),
       start_timestamp_(0),
       duration_(0),
       rgb_fps_(0),
@@ -334,8 +334,10 @@ Reader::Reader(const std::string& filename)
       } else if (std::string(tag->key).find("distortion_model") != std::string::npos) {
         is_rgb_distorted_ = true;
         rgb_distortion_model_ = tag->value;
-      } else if (std::string(tag->key).find("distortion_params") != std::string::npos) {
-        rgb_distortion_params_ = tag->value;
+      } else if (std::string(tag->key).find("distortion_params_0") != std::string::npos) {
+        rgb_distortion_params_left_ = tag->value;
+      } else if (std::string(tag->key).find("distortion_params_1") != std::string::npos) {
+        rgb_distortion_params_right_ = tag->value;
       } else if (std::string(tag->key).find("timebase") != std::string::npos) {
         rgb_timebase_ = std::stoul(tag->value);
       }
@@ -400,7 +402,7 @@ Reader::Reader(const std::string& filename)
                         extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11], 0, 0, 0, 1);
       } else if (std::string(tag->key).find("distortion_model") != std::string::npos) {
         depth_distortion_model_ = tag->value;
-      } else if (std::string(tag->key).find("distortion_params") != std::string::npos) {
+      } else if (std::string(tag->key).find("distortion_params_0") != std::string::npos) {
         depth_distortion_params_ = tag->value;
       } else if (std::string(tag->key).find("timebase") != std::string::npos) {
         depth_timebase_ = std::stoul(tag->value);

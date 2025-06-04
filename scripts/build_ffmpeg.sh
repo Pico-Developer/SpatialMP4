@@ -40,17 +40,6 @@ install_deps() {
         nasm
 }
 
-# build_install_x265() {
-#     cd $opt
-#     if [ ! -d x265_git ];then
-#         git clone https://bitbucket.org/multicoreware/x265_git
-#     fi
-#     cd x265_git/build/linux
-#     cmake -G "Unix Makefiles" -DENABLE_SHARED=OFF -DENABLE_HDR10_PLUS=ON -DENABLE_MULTIVIEW=ON ../../source
-#     make -j$(nproc)
-#     sudo make install
-# }
-
 build_install_ffmpeg() {
     cd $opt
     if [ ! -d ffmpeg ];then
@@ -69,10 +58,6 @@ build_install_ffmpeg() {
         --enable-libmp3lame \
         --enable-libvorbis \
         --enable-version3
-
-      # --enable-libx265 \
-      # --enable-gpl \
-      # --enable-nonfree
     
     make -j$(nproc)
     make install
@@ -84,6 +69,4 @@ if [[ "$(uname)" != "Linux" ]]; then
 fi
 
 install_deps
-# # skip x265 for not using enable-gpl
-# build_install_x265
 build_install_ffmpeg

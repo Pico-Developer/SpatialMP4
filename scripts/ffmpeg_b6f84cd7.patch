@@ -32,7 +32,7 @@ index be0a65bcb9..977ecdbb11 100644
  
  /**
 diff --git a/libavformat/mov.c b/libavformat/mov.c
-index 8a094b1ea0..c6ccf5ee03 100644
+index 8a094b1ea0..0994450e06 100644
 --- a/libavformat/mov.c
 +++ b/libavformat/mov.c
 @@ -86,6 +86,10 @@ typedef struct MOVParseTableEntry {
@@ -85,7 +85,7 @@ index 8a094b1ea0..c6ccf5ee03 100644
          if (avio_feof(pb))
              break;
          if (((a.type == MKTAG('f','r','e','e') && c->moov_retry) ||
-@@ -9448,6 +9470,213 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+@@ -9448,6 +9470,229 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
      return 0;
  }
  
@@ -230,20 +230,25 @@ index 8a094b1ea0..c6ccf5ee03 100644
 +    // int64_t remaining_data_size = atom->size - bytes_read;
 +    int64_t dist_coeff_size;
 +    if (strcmp(distortion_model, "equidistant") == 0) {
-+        dist_coeff_size = 4;
++        dist_coeff_size = 4 * 2;    // left and right
 +    } else if (strcmp(distortion_model, "brown") == 0) {
-+        dist_coeff_size = 5;
++        dist_coeff_size = 5 * 2;
 +    } else if (strcmp(distortion_model, "equiDis62") == 0) {
-+        dist_coeff_size = 8;
++        dist_coeff_size = 8 * 2;
 +    } else {
 +        av_log(c->fc, AV_LOG_ERROR, "DSTR box: unknown distortion model: %s\n", distortion_model);
 +        return AVERROR_INVALIDDATA;
 +    }
-+    char *value_str = av_malloc(dist_coeff_size * 32); // each double has at most 32 characters
-+    if (!value_str) {
++    char *value_str_left = av_malloc(dist_coeff_size * 32); // each double has at most 32 characters
++    if (!value_str_left) {
 +        return AVERROR(ENOMEM);
 +    }
-+    value_str[0] = '\0';
++    value_str_left[0] = '\0';
++    char *value_str_right = av_malloc(dist_coeff_size * 32);
++    if (!value_str_right) {
++        return AVERROR(ENOMEM);
++    }
++    value_str_right[0] = '\0';
 +    int64_t remaining_data_size = sizeof(double) * dist_coeff_size;
 +    double *additional_data = NULL;
 +    if (remaining_data_size > 0) {
@@ -262,21 +267,32 @@ index 8a094b1ea0..c6ccf5ee03 100644
 +    for (int i = 0; i < dist_coeff_size; i++) {
 +        char temp[32];
 +        snprintf(temp, sizeof(temp), "%f,", additional_data[i]);
-+        strcat(value_str, temp);
++        if (i < dist_coeff_size / 2) {
++            strcat(value_str_left, temp);
++        } else {
++            strcat(value_str_right, temp);
++        }
 +    }
-+    if (strlen(value_str) > 0) {
-+        value_str[strlen(value_str) - 1] = '\0';
++    if (strlen(value_str_left) > 0) {
++        value_str_left[strlen(value_str_left) - 1] = '\0';
 +    }
-+    av_log(c->fc, AV_LOG_DEBUG, "DSTR box: %s\n", value_str);
++    if (strlen(value_str_right) > 0) {
++        value_str_right[strlen(value_str_right) - 1] = '\0';
++    }
++    av_log(c->fc, AV_LOG_DEBUG, "DSTR box: %s, %s\n", value_str_left, value_str_right);
 +    
 +    AVStream *st = c->fc->streams[c->fc->nb_streams-1];
 +    
 +    // Store individual components in metadata
 +    av_dict_set(&st->metadata, "camera_model", camera_model, 0);
 +    av_dict_set(&st->metadata, "distortion_model", distortion_model, 0);
-+    av_dict_set(&st->metadata, "distortion_params", value_str, 0);
++    av_dict_set(&st->metadata, "distortion_params_0", value_str_left, 0);
++    if (st->codecpar->codec_id != 0) { // 0 is for depth track
++        av_dict_set(&st->metadata, "distortion_params_1", value_str_right, 0);
++    }
 +    
-+    av_freep(&value_str);
++    av_freep(&value_str_left);
++    av_freep(&value_str_right);
 +    av_freep(&additional_data);
 +    return 0;
 +}

@@ -54,7 +54,8 @@ TEST(SpatialMP4Test, Basic_ReaderTest) {
   std::cout << "depth_extrinsics: " << depth_extrinsics << std::endl;
   std::cout << "is_rgb_distorted: " << (reader.IsRgbDistorted() ? "true" : "false") << std::endl;
   std::cout << "rgb_distortion_model: " << reader.GetRgbDistortionModel() << std::endl;
-  std::cout << "rgb_distortion_params: " << reader.GetRgbDistortionParams() << std::endl;
+  std::cout << "rgb_distortion_params_left: " << reader.GetRgbDistortionParamsLeft() << std::endl;
+  std::cout << "rgb_distortion_params_right: " << reader.GetRgbDistortionParamsRight() << std::endl;
   std::cout << "depth_distortion_model: " << reader.GetDepthDistortionModel() << std::endl;
   std::cout << "depth_distortion_params: " << reader.GetDepthDistortionParams() << std::endl;
   std::cout << "rgb_timebase: " << SpatialML::microsecondsToDateTime(reader.GetRgbTimebase()) << std::endl;
@@ -142,6 +143,11 @@ TEST(SpatialMP4Test, DepthFirst_ReaderTest) {
     // Read head_model_offset from /system/etc/pvr/config/config_head.txt#line_1
     auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
 
+    // Note:
+    //   W: World
+    //   H: Head
+    //   S: Sensor, rgb sensor or depth sensor
+    //   I: IMU
     auto T_W_Hrgb = rgb_frame.pose.as_se3();
     auto T_W_Htof = depth_frame.pose.as_se3();
     Sophus::SE3d T_W_Irgb, T_W_Itof;

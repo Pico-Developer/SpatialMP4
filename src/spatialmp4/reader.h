@@ -113,7 +113,8 @@ class Reader {
   int GetDepthKeyframeIndex() const { return keyframe_depth_idx_; }
   bool IsRgbDistorted() const { return is_rgb_distorted_; }
   std::string GetRgbDistortionModel() const { return rgb_distortion_model_; }
-  std::string GetRgbDistortionParams() const { return rgb_distortion_params_; }
+  std::string GetRgbDistortionParamsLeft() const { return rgb_distortion_params_left_; }
+  std::string GetRgbDistortionParamsRight() const { return rgb_distortion_params_right_; }
   std::string GetDepthDistortionModel() const { return depth_distortion_model_; }
   std::string GetDepthDistortionParams() const { return depth_distortion_params_; }
   uint64_t GetRgbTimebase() const { return rgb_timebase_; }
@@ -174,7 +175,8 @@ class Reader {
   camera_extrinsics depth_extrinsics_;
   bool is_rgb_distorted_;
   std::string rgb_distortion_model_;
-  std::string rgb_distortion_params_;
+  std::string rgb_distortion_params_left_;
+  std::string rgb_distortion_params_right_;
   std::string depth_distortion_model_;
   std::string depth_distortion_params_;
 
