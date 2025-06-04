@@ -23,13 +23,13 @@
 
 项目依赖以下第三方库：
 
-- **FFmpeg**: 视频编解码 (libavformat, libavcodec, libswscale)
-- **OpenCV**: 图像处理和计算机视觉
-- **Eigen3**: 线性代数运算
-- **Sophus**: SE(3)群的李群操作
-- **spdlog**: 高性能日志库
-- **fmt**: 现代C++格式化库
-- **Google Test**: 单元测试框架 (可选)
+- [**FFmpeg**](https://github.com/FFmpeg/FFmpeg): 视频编解码 (libavformat, libavcodec, libswscale)
+- [**OpenCV**](https://github.com/opencv/opencv): 图像处理和计算机视觉
+- [**Eigen3**](https://eigen.tuxfamily.org/index.php?title=Main_Page): 线性代数运算
+- [**Sophus**](https://github.com/strasdat/Sophus): SE(3)群的李群操作
+- [**spdlog**](https://github.com/gabime/spdlog): 高性能日志库
+- [**fmt**](https://github.com/fmtlib/fmt): 现代C++格式化库
+- [**Google Test**](https://github.com/google/googletest): 单元测试框架 (可选)
 
 ## 🛠️ 编译安装
 
