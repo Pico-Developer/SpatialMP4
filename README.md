@@ -301,7 +301,7 @@ spdlog::set_level(spdlog::level::debug);
 
 ## 📄 License
 
-This project is licensed under the GNU Lesser General Public License v2.1. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT. See the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Contributing
 
