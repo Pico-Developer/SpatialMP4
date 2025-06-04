@@ -23,13 +23,13 @@ A C++/Python toolkit for processing SpatialMP4 format, supporting reading and pr
 
 The project depends on the following third-party libraries:
 
-- **FFmpeg**: Video encoding/decoding (libavformat, libavcodec, libswscale)
-- **OpenCV**: Image processing and computer vision
-- **Eigen3**: Linear algebra operations
-- **Sophus**: Lie group operations for SE(3) group
-- **spdlog**: High-performance logging library
-- **fmt**: Modern C++ formatting library
-- **Google Test**: Unit testing framework (optional)
+- [**FFmpeg**](https://github.com/FFmpeg/FFmpeg): Video encoding/decoding (libavformat, libavcodec, libswscale)
+- [**OpenCV**](https://github.com/opencv/opencv): Image processing and computer vision
+- [**Eigen3**](https://eigen.tuxfamily.org/index.php?title=Main_Page): Linear algebra operations
+- [**Sophus**](https://github.com/strasdat/Sophus): Lie group operations for SE(3) group
+- [**spdlog**](https://github.com/gabime/spdlog): High-performance logging library
+- [**fmt**](https://github.com/fmtlib/fmt): Modern C++ formatting library
+- [**Google Test**](https://github.com/google/googletest): Unit testing framework (optional)
 
 ## 🛠️ Build and Installation
 

@@ -14,7 +14,8 @@ if(BUILD_ANDROID)
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fPIC -DEIGEN_MPL2_ONLY")
+
 
 include(cmake/ffmpeg_local.cmake)
 include(cmake/opencv_host.cmake)
