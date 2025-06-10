@@ -36,7 +36,7 @@ The project depends on the following third-party libraries:
 ### 1. Clone Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Pico-Developer/SpatialMP4
 cd SpatialMP4
 ```
 
