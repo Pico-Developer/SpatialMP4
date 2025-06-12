@@ -12,32 +12,44 @@ if [ ! -d $opt ];then
 fi
 
 install_deps() {
-    # Ubuntu/Debian
-    sudo apt-get update
-    sudo apt-get install -y \
-        autoconf \
-        automake \
-        build-essential \
-        cmake \
-        git-core \
-        libass-dev \
-        libfreetype6-dev \
-        libgnutls28-dev \
-        libmp3lame-dev \
-        libsdl2-dev \
-        libtool \
-        libva-dev \
-        libvdpau-dev \
-        libvorbis-dev \
-        libxcb1-dev \
-        libxcb-shm0-dev \
-        libxcb-xfixes0-dev \
-        pkg-config \
-        texinfo \
-        wget \
-        yasm \
-        zlib1g-dev \
-        nasm
+    if [[ "$(uname)" == "Darwin"  ]];then
+        # https://trac.ffmpeg.org/wiki/CompilationGuide/macOS
+        if ! hash brew 2>/dev/null;then
+            echo 'brew not found, please install brew first.'
+            echo 'Install example: >> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+            exit
+        fi
+        brew install automake fdk-aac git lame libass libtool libvorbis libvpx opus sdl shtool texi2html theora wget x264 x265 xvid nasm
+    elif [[ "$(uname)" == "Linux" ]]; then
+        # Ubuntu/Debian
+        sudo apt-get update
+        sudo apt-get install -y \
+            autoconf \
+            automake \
+            build-essential \
+            cmake \
+            git-core \
+            libass-dev \
+            libfreetype6-dev \
+            libgnutls28-dev \
+            libmp3lame-dev \
+            libsdl2-dev \
+            libtool \
+            libva-dev \
+            libvdpau-dev \
+            libvorbis-dev \
+            libxcb1-dev \
+            libxcb-shm0-dev \
+            libxcb-xfixes0-dev \
+            pkg-config \
+            texinfo \
+            wget \
+            yasm \
+            zlib1g-dev \
+            nasm
+    elif [[ "$(uname)" == *"_NT"* ]]; then
+        echo "Not supported windows now."
+    fi
 }
 
 build_install_ffmpeg() {
@@ -49,24 +61,21 @@ build_install_ffmpeg() {
     git reset --hard b6f84cd7
     git apply $cur/ffmpeg_b6f84cd7.patch
     ./configure \
+        --disable-doc \
         --prefix=$INSTALL_PREFIX \
         --pkg-config-flags="--static" \
         --extra-cflags="-I/usr/local/include" \
         --extra-ldflags="-L/usr/local/lib" \
         --enable-libass \
         --enable-libfreetype \
-        --enable-libmp3lame \
         --enable-libvorbis \
         --enable-version3
+
+        # --enable-libmp3lame \
     
     make -j$(nproc)
     make install
 }
-
-if [[ "$(uname)" != "Linux" ]]; then
-    echo "Only support Linux"
-    exit
-fi
 
 install_deps
 build_install_ffmpeg

@@ -23,9 +23,13 @@
 #include "utilities/PointcloudUtils.h"
 #include "spdlog/spdlog.h"
 #include <sophus/se3.hpp>
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace fs = std::experimental::filesystem;
+#if defined(__APPLE__) && defined(__clang__)
+namespace fs = std::__fs::filesystem;
+#else
+namespace fs = std::filesystem;
+#endif
 
 const std::string kTestFile = "video/test.mp4";
 const std::string kVisRgbDir = "./tmp_vis_rgb";

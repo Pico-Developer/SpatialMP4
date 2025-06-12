@@ -32,17 +32,17 @@ index be0a65bcb9..977ecdbb11 100644
  
  /**
 diff --git a/libavformat/mov.c b/libavformat/mov.c
-index 8a094b1ea0..0994450e06 100644
+index 8a094b1ea0..6fec10583f 100644
 --- a/libavformat/mov.c
 +++ b/libavformat/mov.c
 @@ -86,6 +86,10 @@ typedef struct MOVParseTableEntry {
  static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom);
  static int mov_read_mfra(MOVContext *c, AVIOContext *f);
  static void mov_free_stream_context(AVFormatContext *s, AVStream *st);
-+static int mov_read_icam(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // camera intrinsics
-+static int mov_read_ecam(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // camera extrinsic
-+static int mov_read_dstr(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // distortion
-+static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom *atom);        // timebase
++static int mov_read_icam(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // camera intrinsics
++static int mov_read_ecam(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // camera extrinsic
++static int mov_read_dstr(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // distortion
++static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // timebase
  
  static int mov_metadata_track_or_disc_number(MOVContext *c, AVIOContext *pb,
                                               unsigned len, const char *key)
@@ -64,6 +64,15 @@ index 8a094b1ea0..0994450e06 100644
      } else {
          /* other codec type, just skip (rtp, mp4s ...) */
          avio_skip(pb, size);
+@@ -3978,7 +3993,7 @@ static int find_prev_closest_index(AVStream *st,
+  * unincremented timestamp for successive discarded frames.
+  */
+ static int64_t add_index_entry(AVStream *st, int64_t pos, int64_t timestamp,
+-                               int size, int distance, int flags)
++                              int size, int distance, int flags)
+ {
+     FFStream *const sti = ffstream(st);
+     AVIndexEntry *entries, *ie;
 @@ -9323,6 +9338,10 @@ static const MOVParseTableEntry mov_default_parse_table[] = {
  #if CONFIG_IAMFDEC
  { MKTAG('i','a','c','b'), mov_read_iacb },
@@ -89,7 +98,7 @@ index 8a094b1ea0..0994450e06 100644
      return 0;
  }
  
-+static int mov_read_icam(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++static int mov_read_icam(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 +{
 +    if (!c || !c->fc) {
 +        av_log(NULL, AV_LOG_ERROR, "Invalid context for ICAM box\n");
@@ -144,7 +153,7 @@ index 8a094b1ea0..0994450e06 100644
 +    return 0;
 +}
 +
-+static int mov_read_ecam(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++static int mov_read_ecam(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 +{
 +    if (!c || !c->fc) {
 +        av_log(NULL, AV_LOG_ERROR, "Invalid context for ECAM box\n");
@@ -198,7 +207,7 @@ index 8a094b1ea0..0994450e06 100644
 +    return 0;
 +}
 +
-+static int mov_read_dstr(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++static int mov_read_dstr(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 +{
 +    if (!c || !c->fc) {
 +        av_log(NULL, AV_LOG_ERROR, "Invalid context for DSTR box\n");
@@ -297,7 +306,7 @@ index 8a094b1ea0..0994450e06 100644
 +    return 0;
 +}
 +
-+static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom *atom)
++static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 +{   
 +    if (!c || !c->fc) {
 +        av_log(NULL, AV_LOG_ERROR, "Invalid context for TBTM box\n");

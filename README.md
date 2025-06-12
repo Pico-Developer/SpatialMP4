@@ -15,7 +15,7 @@ A C++/Python toolkit for processing SpatialMP4 format, supporting reading and pr
 
 ## 📋 System Requirements
 
-- **Operating System**: Linux (Ubuntu 18.04+ recommended)
+- **Operating System**: Linux (Ubuntu 18.04+ recommended), MacOS (xcode is required)
 - **Compiler**: GCC 7.0+ or Clang 6.0+ (C++17 support required)
 - **CMake**: 3.22.1+
 
@@ -48,10 +48,10 @@ Build `ffmpeg` first.
 bash scripts/build_ffmpeg.sh
 ```
 
-### 3. Install OpenCV
+### 3. Install Dependencies
 
 ```bash
-sudo apt update && sudo apt install -y libopencv-dev
+bash scripts/install_deps.sh
 ```
 
 ### 4. Configure and Build
