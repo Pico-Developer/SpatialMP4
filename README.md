@@ -48,7 +48,13 @@ Build `ffmpeg` first.
 bash scripts/build_ffmpeg.sh
 ```
 
-### 3. Configure and Build
+### 3. Install OpenCV
+
+```bash
+sudo apt update && sudo apt install -y libopencv-dev
+```
+
+### 4. Configure and Build
 
 ```bash
 mkdir build && cd build
@@ -60,7 +66,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 ```
 
-### 4. Run Tests (Optional)
+### 5. Run Tests (Optional)
 
 ```bash
 # Build with tests

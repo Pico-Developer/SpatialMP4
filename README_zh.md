@@ -46,7 +46,13 @@ cd SpatialMP4
 bash scripts/build_ffmpeg.sh
 ```
 
-### 3. 配置和编译
+### 3. 安装OpenCV
+
+```bash
+sudo apt update && sudo apt install -y libopencv-dev
+```
+
+### 4. 配置和编译
 
 ```bash
 mkdir build && cd build
@@ -58,7 +64,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 ```
 
-### 4. 运行测试 (可选)
+### 5. 运行测试 (可选)
 
 ```bash
 # 编译测试
