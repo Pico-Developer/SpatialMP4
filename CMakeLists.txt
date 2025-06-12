@@ -24,7 +24,7 @@ include(cmake/eigen.cmake)
 include(cmake/sophus.cmake)
  
 set(SRC 
-    ./src/utilities/OpencvUtils.cc
+    ./src/spatialmp4/utilities/OpencvUtils.cc
     ./src/spatialmp4/utils.cc
     ./src/spatialmp4/reader.cc
 )
@@ -46,8 +46,8 @@ if(BUILD_TESTING)
     include(cmake/gtest.cmake)
     add_executable(test_reader
         ${SRC}
-        ./src/utilities/RgbdUtils.cc
-        ./src/utilities/PointcloudUtils.cc
+        ./src/spatialmp4/utilities/RgbdUtils.cc
+        ./src/spatialmp4/utilities/PointcloudUtils.cc
         ./src/spatialmp4/reader_test.cc
     )
     target_link_libraries(test_reader PRIVATE

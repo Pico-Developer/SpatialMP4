@@ -26,9 +26,11 @@
 #include <filesystem>
 
 #if defined(__APPLE__) && defined(__clang__)
-namespace fs = std::__fs::filesystem;
+  #include <filesystem>
+  namespace fs = std::__fs::filesystem;
 #else
-namespace fs = std::filesystem;
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
 #endif
 
 const std::string kTestFile = "video/test.mp4";
