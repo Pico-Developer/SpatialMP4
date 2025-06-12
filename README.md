@@ -12,11 +12,16 @@ A C++/Python toolkit for processing SpatialMP4 format, supporting reading and pr
 - **3D Reconstruction**: Built-in point cloud generation and RGBD data processing
 - **Camera Calibration**: Support for reading and applying intrinsic and extrinsic parameters
 - **Visualization Tools**: Rich data visualization and debugging capabilities
+- **Cross-Platform**: Full support for Linux and macOS
 
 ## 📋 System Requirements
 
-- **Operating System**: Linux (Ubuntu 18.04+ recommended), MacOS (xcode is required)
-- **Compiler**: GCC 7.0+ or Clang 6.0+ (C++17 support required)
+- **Operating System**: 
+  - Linux (Ubuntu 18.04+ recommended)
+  - macOS (10.15+ Catalina, Xcode required)
+- **Compiler**: 
+  - GCC 7.0+ or Clang 6.0+ (C++17 support required)
+  - Apple Clang from Xcode 11.0+ on macOS ([how-to-install](https://trac.ffmpeg.org/wiki/CompilationGuide/macOS#Xcode))
 - **CMake**: 3.22.1+
 
 ## 🔧 Dependencies
@@ -42,7 +47,7 @@ cd SpatialMP4
 
 ### 2. Build FFmpeg
 
-Build `ffmpeg` first.
+Build `ffmpeg` first:
 
 ```bash
 bash scripts/build_ffmpeg.sh
@@ -63,7 +68,8 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 
 # Build
-make -j$(nproc)
+make -j$(nproc)  # On Linux
+make -j$(sysctl -n hw.ncpu)  # On macOS
 ```
 
 ### 5. Run Tests (Optional)
@@ -71,7 +77,8 @@ make -j$(nproc)
 ```bash
 # Build with tests
 cmake .. -DBUILD_TESTING=ON
-make -j$(nproc)
+make -j$(nproc)  # On Linux
+make -j$(sysctl -n hw.ncpu)  # On macOS
 
 # Run tests
 cd ..

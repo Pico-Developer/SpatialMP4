@@ -12,11 +12,16 @@
 - **3D重建**: 内置点云生成和RGBD数据处理功能
 - **相机标定**: 支持内参和外参的读取与应用
 - **可视化工具**: 丰富的数据可视化和调试功能
+- **跨平台支持**: 完整支持Linux和macOS系统
 
 ## 📋 系统要求
 
-- **操作系统**: Linux (推荐Ubuntu 20.04+)
-- **编译器**: GCC 7.0+ 或 Clang 6.0+ (支持C++17)
+- **操作系统**: 
+  - Linux (推荐Ubuntu 18.04+)
+  - macOS (10.15+ Catalina，需要安装Xcode)
+- **编译器**: 
+  - GCC 7.0+ 或 Clang 6.0+ (支持C++17)
+  - macOS上需要Xcode 11.0+的Apple Clang ([how-to-install](https://trac.ffmpeg.org/wiki/CompilationGuide/macOS#Xcode))
 - **CMake**: 3.22.1+
 
 ## 🔧 依赖库
@@ -42,14 +47,16 @@ cd SpatialMP4
 
 ### 2. 编译FFmpeg
 
+首先编译`ffmpeg`：
+
 ```bash
 bash scripts/build_ffmpeg.sh
 ```
 
-### 3. 安装OpenCV
+### 3. 安装依赖
 
 ```bash
-sudo apt update && sudo apt install -y libopencv-dev
+bash scripts/install_deps.sh
 ```
 
 ### 4. 配置和编译
@@ -61,7 +68,8 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 
 # 编译
-make -j$(nproc)
+make -j$(nproc)  # Linux系统
+make -j$(sysctl -n hw.ncpu)  # macOS系统
 ```
 
 ### 5. 运行测试 (可选)
@@ -69,7 +77,8 @@ make -j$(nproc)
 ```bash
 # 编译测试
 cmake .. -DBUILD_TESTING=ON
-make -j$(nproc)
+make -j$(nproc)  # Linux系统
+make -j$(sysctl -n hw.ncpu)  # macOS系统
 
 # 运行测试
 cd ..
