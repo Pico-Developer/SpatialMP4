@@ -19,7 +19,7 @@ install_deps() {
             echo 'Install example: >> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
             exit
         fi
-        brew install automake cmake fdk-aac git lame libass libtool libvorbis libvpx opus sdl shtool texi2html theora wget x264 x265 xvid nasm
+        brew install automake fdk-aac git lame libass libtool libvorbis libvpx opus sdl shtool texi2html theora wget x264 x265 xvid nasm
     elif [[ "$(uname)" == "Linux" ]]; then
         # Ubuntu/Debian
         sudo apt-get update
@@ -27,7 +27,6 @@ install_deps() {
             autoconf \
             automake \
             build-essential \
-            cmake \
             git-core \
             libass-dev \
             libfreetype6-dev \
