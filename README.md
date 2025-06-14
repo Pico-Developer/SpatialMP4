@@ -72,6 +72,10 @@ make -j$(nproc)  # On Linux
 make -j$(sysctl -n hw.ncpu)  # On macOS
 ```
 
+Sometime it can be difficult to build a c++ source project. [FAQ for installation](docs/install_faq.md)
+may help you. If still not working, welcome [submit a issue](https://github.com/Pico-Developer/SpatialMP4/issues).
+
+
 ### 5. Run Tests (Optional)
 
 ```bash

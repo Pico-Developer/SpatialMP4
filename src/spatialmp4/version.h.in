@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+namespace SpatialML {
+
+// 版本号定义
+#define SPATIALMP4_VERSION_MAJOR @SPATIALMP4_VERSION_MAJOR@
+#define SPATIALMP4_VERSION_MINOR @SPATIALMP4_VERSION_MINOR@
+#define SPATIALMP4_VERSION_PATCH @SPATIALMP4_VERSION_PATCH@
+#define SPATIALMP4_VERSION "@SPATIALMP4_VERSION@"
+
+// 版本号字符串
+inline const char* GetVersion() {
+    return SPATIALMP4_VERSION;
+}
+
+// 获取主版本号
+inline int GetMajorVersion() {
+    return SPATIALMP4_VERSION_MAJOR;
+}
+
+// 获取次版本号
+inline int GetMinorVersion() {
+    return SPATIALMP4_VERSION_MINOR;
+}
+
+// 获取补丁版本号
+inline int GetPatchVersion() {
+    return SPATIALMP4_VERSION_PATCH;
+}
+
+} // namespace SpatialML 

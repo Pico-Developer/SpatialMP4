@@ -71,6 +71,8 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)  # Linux系统
 make -j$(sysctl -n hw.ncpu)  # macOS系统
 ```
+如果编译报错，请参考[FAQ for installation](docs/install_faq.md)。如果还是解决不了，
+欢迎[提issue](https://github.com/Pico-Developer/SpatialMP4/issues)，我们会及时帮助你。
 
 ### 5. 运行测试 (可选)
 

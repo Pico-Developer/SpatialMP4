@@ -40,3 +40,9 @@ build/*
 
 # ffmpeg build
 scripts/build_ffmpeg
+
+# python venv
+.venv
+
+# cibuildwheel
+wheelhouse

@@ -1,0 +1,39 @@
+[build-system]
+build-backend = "cmeel"
+requires = [
+  "cmeel[build]",
+  "cmake<4",
+  "doxystub >= 0.0.13"
+]
+
+[project]
+name = "spatialmp4"
+version = "0.1.0"
+description = "SpatialMP4 Python Package"
+authors = [{ email = "bingwen.ai@bytedance.com", name = "Bingwen Wang" }]
+license = "MIT"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy",
+    "opencv-python"
+]
+
+[project.urls]
+repository = "https://github.com/Pico-Developer/SpatialMP4"
+
+[tool.cmeel]
+run-tests = false
+
+[tool.cibuildwheel]
+before-all = "bash scripts/build_ffmpeg.sh && bash scripts/install_deps.sh"
+build = "cp3*-*"
+skip = "pp* *-win32 *-win_amd64"
