@@ -18,30 +18,30 @@
 
 namespace SpatialML {
 
-// 版本号定义
-#define SPATIALMP4_VERSION_MAJOR @SPATIALMP4_VERSION_MAJOR@
-#define SPATIALMP4_VERSION_MINOR @SPATIALMP4_VERSION_MINOR@
-#define SPATIALMP4_VERSION_PATCH @SPATIALMP4_VERSION_PATCH@
-#define SPATIALMP4_VERSION "@SPATIALMP4_VERSION@"
+// Version number definitions
+#define SPATIALMP4_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define SPATIALMP4_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define SPATIALMP4_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define SPATIALMP4_VERSION "@PROJECT_VERSION@"
 
-// 版本号字符串
+// Version string
 inline const char* GetVersion() {
     return SPATIALMP4_VERSION;
 }
 
-// 获取主版本号
+// Get major version number
 inline int GetMajorVersion() {
-    return SPATIALMP4_VERSION_MAJOR;
+    return @PROJECT_VERSION_MAJOR@;
 }
 
-// 获取次版本号
+// Get minor version number
 inline int GetMinorVersion() {
-    return SPATIALMP4_VERSION_MINOR;
+    return @PROJECT_VERSION_MINOR@;
 }
 
-// 获取补丁版本号
+// Get patch version number
 inline int GetPatchVersion() {
-    return SPATIALMP4_VERSION_PATCH;
+    return @PROJECT_VERSION_PATCH@;
 }
 
 } // namespace SpatialML 

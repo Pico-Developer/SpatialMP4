@@ -2,11 +2,7 @@ cmake_minimum_required(VERSION 3.24.1 FATAL_ERROR)
 
 project(spatialmp4 VERSION 0.1.0)
 
-# Define version number macros
-add_definitions(-DSPATIALMP4_VERSION_MAJOR=${PROJECT_VERSION_MAJOR})
-add_definitions(-DSPATIALMP4_VERSION_MINOR=${PROJECT_VERSION_MINOR})
-add_definitions(-DSPATIALMP4_VERSION_PATCH=${PROJECT_VERSION_PATCH})
-add_definitions(-DSPATIALMP4_VERSION="${PROJECT_VERSION}")
+# Configure version header
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/spatialmp4/version.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/include/spatialmp4/version.h

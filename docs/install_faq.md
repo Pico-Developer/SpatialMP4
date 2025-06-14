@@ -1,6 +1,6 @@
 # FAQ for build and install
 
-Source build a project sometimes can be not easy. This document help you out of
+Source build a project sometimes can be not easy. This document helps you out of
 the trouble.
 
 ## Question 1
