@@ -37,6 +37,7 @@
 
 tmp*
 build/*
+build-editable/*
 
 # ffmpeg build
 scripts/build_ffmpeg
