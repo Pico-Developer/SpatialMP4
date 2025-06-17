@@ -254,6 +254,14 @@ Reader::Reader(const std::string& filename)
       allframe_rgb_idx_(0),
       keyframe_depth_idx_(0) {
   // av_log_set_level(AV_LOG_DEBUG);
+
+  if (filename_.find(' ') != std::string::npos) {
+    throw std::runtime_error("Find blank in filename, please fix it.");
+  }
+  if (!fs::exists(filename_)) {
+    throw std::runtime_error("Could not open file " + filename_);
+  }
+
   int ret = avformat_open_input(&pFormatCtx_, filename_.c_str(), NULL, NULL);
   if (ret < 0) {
     throw std::runtime_error("Could not open file " + filename_);

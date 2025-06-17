@@ -41,6 +41,12 @@ target_link_libraries(${CMAKE_PROJECT_NAME}_static PUBLIC
     Eigen3::Eigen
     sophus
 )
+# On newer versions of macOS (>=10.15) and with newer compilers,
+# filesystem is part of the standard library and doesn't need explicit linking
+if(UNIX AND NOT APPLE)
+    target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE stdc++fs)
+endif()
+
 
 if(BUILD_TESTING)
     include(cmake/gtest.cmake)

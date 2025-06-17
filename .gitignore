@@ -44,3 +44,6 @@ scripts/build_ffmpeg
 # python
 .venv
 pyc
+
+# mac
+.DS_Store
