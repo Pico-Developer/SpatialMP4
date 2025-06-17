@@ -1,0 +1,2 @@
+recursive-include spatialmp4 *.so *.dylib
+include pyproject.toml

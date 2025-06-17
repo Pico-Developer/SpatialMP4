@@ -15,6 +15,14 @@
  */
 
 #pragma once
+
+// 导出宏定义
+#if defined(_WIN32)
+#  define SPATIALMP4_EXPORT __declspec(dllexport)
+#else
+#  define SPATIALMP4_EXPORT __attribute__((visibility("default")))
+#endif
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -37,7 +45,7 @@ namespace SpatialML {
  * Random access video reader.
  * This class is used to read a video file in random access mode.
  */
-class RandomAccessVideoReader {
+class SPATIALMP4_EXPORT RandomAccessVideoReader {
  public:
   RandomAccessVideoReader() = default;
   ~RandomAccessVideoReader();
@@ -65,7 +73,7 @@ class RandomAccessVideoReader {
  * This class is used to read a SpatialMP4 file.
  * The file format is described in the SpatialMP4 format specification.
  */
-class Reader {
+class SPATIALMP4_EXPORT Reader {
  public:
   enum ReadMode {
     RGB_ONLY,

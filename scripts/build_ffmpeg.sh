@@ -59,17 +59,26 @@ build_install_ffmpeg() {
     cd ffmpeg
     git reset --hard b6f84cd7
     git apply $cur/ffmpeg_b6f84cd7.patch
+    
+    # Clean previous build
+    make distclean || true
+    
+    # Configure with enhanced PIC support
     ./configure \
         --disable-doc \
         --prefix=$INSTALL_PREFIX \
         --pkg-config-flags="--static" \
-        --extra-cflags="-I/usr/local/include" \
-        --extra-ldflags="-L/usr/local/lib" \
+        --enable-pic \
+        --enable-static \
+        --extra-cflags="-I/usr/local/include -fPIC -fPIE" \
+        --extra-cxxflags="-fPIC -fPIE" \
+        --extra-ldflags="-L/usr/local/lib -fPIC" \
         --enable-libass \
         --enable-libfreetype \
         --enable-libvorbis \
         --enable-version3
 
+        # --enable-shared \
         # --enable-libmp3lame \
     
     make -j$(nproc)
