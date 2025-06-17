@@ -40,3 +40,7 @@ build/*
 
 # ffmpeg build
 scripts/build_ffmpeg
+
+# python
+.venv
+pyc
