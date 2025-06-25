@@ -22,7 +22,7 @@ A C++/Python toolkit for processing SpatialMP4 format, supporting reading and pr
 - **Compiler**: 
   - GCC 7.0+ or Clang 6.0+ (C++17 support required)
   - Apple Clang from Xcode 11.0+ on macOS ([how-to-install](https://trac.ffmpeg.org/wiki/CompilationGuide/macOS#Xcode))
-- **CMake**: 3.22.1+
+- **CMake**: 3.24.1+
 
 ## 🔧 Dependencies
 

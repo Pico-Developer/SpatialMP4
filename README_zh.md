@@ -22,7 +22,7 @@
 - **编译器**: 
   - GCC 7.0+ 或 Clang 6.0+ (支持C++17)
   - macOS上需要Xcode 11.0+的Apple Clang ([how-to-install](https://trac.ffmpeg.org/wiki/CompilationGuide/macOS#Xcode))
-- **CMake**: 3.22.1+
+- **CMake**: 3.24.1+
 
 ## 🔧 依赖库
 
