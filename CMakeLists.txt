@@ -16,7 +16,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 option(BUILD_ANDROID "whether build for android" OFF)
 option(BUILD_TESTING "whether build unit test" ON)
-option(BUILD_PYTHON_BINDINGS "whether build python bindings" OFF)
+option(BUILD_PYTHON_BINDINGS "whether build python bindings" ON)
 
 if(BUILD_ANDROID)
     message(FATAL_ERROR "Don't support android building.")
