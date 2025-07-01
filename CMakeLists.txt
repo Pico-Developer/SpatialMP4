@@ -70,24 +70,44 @@ if(APPLE)
         BUILD_WITH_INSTALL_RPATH TRUE
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/python
     )
+    
+    # Find macOS frameworks
+    find_library(FOUNDATION_FRAMEWORK Foundation)
+    find_library(AUDIOTOOLBOX_FRAMEWORK AudioToolbox)
+    find_library(COREAUDIO_FRAMEWORK CoreAudio)
+    find_library(AVFOUNDATION_FRAMEWORK AVFoundation)
+    find_library(COREVIDEO_FRAMEWORK CoreVideo)
+    find_library(COREMEDIA_FRAMEWORK CoreMedia)
+    find_library(COREGRAPHICS_FRAMEWORK CoreGraphics)
+    find_library(OPENGL_FRAMEWORK OpenGL)
+    find_library(APPLICATIONSERVICES_FRAMEWORK ApplicationServices)
+    find_library(COREFOUNDATION_FRAMEWORK CoreFoundation)
+    find_library(APPKIT_FRAMEWORK AppKit)
+    find_library(CARBON_FRAMEWORK Carbon)
+    find_library(METAL_FRAMEWORK Metal)
+    find_library(VIDEOTOOLBOX_FRAMEWORK VideoToolbox)
+    find_library(COREIMAGE_FRAMEWORK CoreImage)
+    find_library(CORESERVICES_FRAMEWORK CoreServices)
+    find_library(SECURITY_FRAMEWORK Security)
+    
     target_link_libraries(${CMAKE_PROJECT_NAME}_lib PUBLIC
-        "-framework Foundation"
-        "-framework AudioToolbox"
-        "-framework CoreAudio"
-        "-framework AVFoundation"
-        "-framework CoreVideo"
-        "-framework CoreMedia"
-        "-framework CoreGraphics"
-        "-framework OpenGL"
-        "-framework ApplicationServices"
-        "-framework CoreFoundation"
-        "-framework AppKit"
-        "-framework Carbon"
-        "-framework Metal"
-        "-framework VideoToolbox"
-        "-framework CoreImage"
-        "-framework CoreServices"
-        "-framework Security"
+        ${FOUNDATION_FRAMEWORK}
+        ${AUDIOTOOLBOX_FRAMEWORK}
+        ${COREAUDIO_FRAMEWORK}
+        ${AVFOUNDATION_FRAMEWORK}
+        ${COREVIDEO_FRAMEWORK}
+        ${COREMEDIA_FRAMEWORK}
+        ${COREGRAPHICS_FRAMEWORK}
+        ${OPENGL_FRAMEWORK}
+        ${APPLICATIONSERVICES_FRAMEWORK}
+        ${COREFOUNDATION_FRAMEWORK}
+        ${APPKIT_FRAMEWORK}
+        ${CARBON_FRAMEWORK}
+        ${METAL_FRAMEWORK}
+        ${VIDEOTOOLBOX_FRAMEWORK}
+        ${COREIMAGE_FRAMEWORK}
+        ${CORESERVICES_FRAMEWORK}
+        ${SECURITY_FRAMEWORK}
     )
 endif()
 
