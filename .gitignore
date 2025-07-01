@@ -48,3 +48,6 @@ scripts/build_ffmpeg
 
 # cibuildwheel
 wheelhouse
+
+# mac
+.DS_Store

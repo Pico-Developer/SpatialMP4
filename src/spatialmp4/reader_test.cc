@@ -23,20 +23,16 @@
 #include "utilities/PointcloudUtils.h"
 #include "spdlog/spdlog.h"
 #include <sophus/se3.hpp>
-#include <filesystem>
-
-#if defined(__APPLE__) && defined(__clang__)
-  #include <filesystem>
-  namespace fs = std::__fs::filesystem;
-#else
-  #include <experimental/filesystem>
-  namespace fs = std::experimental::filesystem;
-#endif
 
 const std::string kTestFile = "video/test.mp4";
 const std::string kVisRgbDir = "./tmp_vis_rgb";
 const std::string kVisRgbDir2 = "./tmp_vis_rgb_random";
 const std::string kVisDepthDir = "./tmp_vis_depth";
+
+TEST(SpatialMP4Test, FilenameCheck_ReaderTest) {
+  EXPECT_THROW(SpatialML::Reader(std::string("video/3DVideo_30min Stationary.mp4")), std::runtime_error);
+  EXPECT_THROW(SpatialML::Reader(std::string("video/dont_exists.mp4")), std::runtime_error);
+}
 
 TEST(SpatialMP4Test, Basic_ReaderTest) {
   SpatialML::Reader reader(kTestFile);
