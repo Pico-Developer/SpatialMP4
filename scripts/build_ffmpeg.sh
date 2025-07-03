@@ -7,11 +7,10 @@ cur=$(dirname $_curfile)
 opt=$cur/build_ffmpeg
 INSTALL_PREFIX=$opt/ffmpeg_install
 
-PIXI_ROOT=$cur/../.pixi/envs/default
 CMAKE_EXTRA_CONFIG=""
-if [ -d $PIXI_ROOT ];then
-    INSTALL_PREFIX=$PIXI_ROOT
-    CMAKE_EXTRA_CONFIG="-DCMAKE_INCLUDE_PATH=${PIXI_ROOT}/include"
+if [ -n "$CONDA_PREFIX" ];then
+    INSTALL_PREFIX=$CONDA_PREFIX
+    CMAKE_EXTRA_CONFIG="-DCMAKE_INCLUDE_PATH=${CONDA_PREFIX}/include"
 fi
 echo "INSTALL_PREFIX: $INSTALL_PREFIX"
 
@@ -106,19 +105,19 @@ build_install_ffmpeg() {
         --disable-ffplay \
         --disable-doc \
         ${EXTRA_CONFIG}
-
         # --enable-libmp3lame \
     
-    make $make_args V=1
+    make $make_args # V=1
     make install
 }
 
+
 build_install_opencv() {
-    if [[ "$(uname)" == "Darwin"  ]];then
-        # Darwin don't need to install opencv from source
+    if [[ "$(uname)" == "Darwin" && -z "$CONDA_PREFIX" ]];then
+        # Darwin without pixi don't need to install opencv from source
         return
     fi
-    opencv_version="4.5.0"
+    opencv_version="4.6.0"
     cd $opt
     if [ ! -d opencv ];then
         git clone https://github.com/opencv/opencv.git -b ${opencv_version}
@@ -171,6 +170,9 @@ build_install_opencv() {
     "
 
     cd $opt/opencv
+    git reset --hard $opencv_version
+    git apply $cur/opencv_460_on_macos.patch
+
     if [ -d release ];then
         rm -rf release
     fi
@@ -183,6 +185,8 @@ build_install_opencv() {
     make install
 }
 
-# install_deps
+if [ -z "$CONDA_PREFIX" ];then
+    install_deps
+fi
 build_install_ffmpeg
-# build_install_opencv
+build_install_opencv

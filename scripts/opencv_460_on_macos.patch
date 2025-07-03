@@ -1,0 +1,28 @@
+diff --git a/3rdparty/libpng/pngpriv.h b/3rdparty/libpng/pngpriv.h
+index 583c26f9bd..ca7bd6ffaf 100644
+--- a/3rdparty/libpng/pngpriv.h
++++ b/3rdparty/libpng/pngpriv.h
+@@ -524,7 +524,7 @@
+     * <fp.h> if possible.
+     */
+ #    if !defined(__MATH_H__) && !defined(__MATH_H) && !defined(__cmath__)
+-#      include <fp.h>
++#      include <math.h>
+ #    endif
+ #  else
+ #    include <math.h>
+diff --git a/3rdparty/zlib/zutil.h b/3rdparty/zlib/zutil.h
+index d9a20ae1bf..f9b0694163 100644
+--- a/3rdparty/zlib/zutil.h
++++ b/3rdparty/zlib/zutil.h
+@@ -142,10 +142,6 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
+ #  ifndef Z_SOLO
+ #    if defined(__MWERKS__) && __dest_os != __be_os && __dest_os != __win32_os
+ #      include <unix.h> /* for fdopen */
+-#    else
+-#      ifndef fdopen
+-#        define fdopen(fd,mode) NULL /* No fdopen() */
+-#      endif
+ #    endif
+ #  endif
+ #endif
