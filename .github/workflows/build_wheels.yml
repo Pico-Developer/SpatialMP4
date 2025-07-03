@@ -1,8 +1,5 @@
 name: Build Wheels
 
-- name: actions-setup-cmake
-  uses: jwlawson/actions-setup-cmake@v2.0.2
-
 on:
   push:
     tags:
