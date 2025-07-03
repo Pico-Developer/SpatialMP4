@@ -166,6 +166,7 @@ build_install_opencv() {
         -D PYTHON_EXECUTABLE=$(which python3)
         -D BUILD_SHARED_LIBS=OFF 
         -D OPENCV_GENERATE_PKGCONFIG=ON
+        -D CMAKE_POLICY_VERSION_MINIMUM=3.5
         ${CMAKE_EXTRA_CONFIG}
     "
 
