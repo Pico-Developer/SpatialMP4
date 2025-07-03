@@ -1,5 +1,8 @@
 name: Build Wheels
 
+- name: actions-setup-cmake
+  uses: jwlawson/actions-setup-cmake@v2.0.2
+
 on:
   push:
     tags:
@@ -21,10 +24,9 @@ jobs:
       with:
         submodules: true
 
-    - name: Install CMake
-      uses: actions/setup-cmake@v4
+    - uses: prefix-dev/setup-pixi@v0.8.8
       with:
-        version: 3.26.4
+        pixi-version: v0.41.4
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -44,6 +46,7 @@ jobs:
         CIBW_BUILD: "cp3*-*"
         CIBW_SKIP: "pp* *-win32 *-win_amd64"
       run: |
+        cmake --version
         bash scripts/install_deps.sh
         bash scripts/build_ffmpeg.sh
         python -m cibuildwheel --output-dir wheelhouse 
