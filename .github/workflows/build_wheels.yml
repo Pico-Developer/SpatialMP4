@@ -31,6 +31,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install cmeel[build]
 
+    - name: Install CMake
+      uses: ssrobins/install-cmake@v1
+      with:
+        version: 3.26.4
+
     - name: Build wheels
       env:
         CIBW_BEFORE_BUILD: |
