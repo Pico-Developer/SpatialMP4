@@ -34,9 +34,11 @@ jobs:
     - name: Build wheels
       env:
         CIBW_BEFORE_BUILD: |
-          bash scripts/build_ffmpeg.sh
           bash scripts/install_deps.sh
+          bash scripts/build_ffmpeg.sh
         CIBW_BUILD: "cp3*-*"
         CIBW_SKIP: "pp* *-win32 *-win_amd64"
       run: |
+        bash scripts/install_deps.sh
+        bash scripts/build_ffmpeg.sh
         python -m cibuildwheel --output-dir wheelhouse 
