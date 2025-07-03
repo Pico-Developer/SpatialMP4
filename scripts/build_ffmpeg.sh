@@ -173,6 +173,7 @@ build_install_opencv() {
     cd $opt/opencv
     git reset --hard $opencv_version
     git apply $cur/opencv_460_on_macos.patch
+    git apply $cur/opencv_for_new_cmake.patch
 
     if [ -d release ];then
         rm -rf release
