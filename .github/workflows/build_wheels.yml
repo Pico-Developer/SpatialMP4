@@ -49,7 +49,6 @@ jobs:
     needs: build_wheels
     runs-on: ubuntu-latest
     steps:
-
     - name: Create release
       id: create_release
       uses: actions/create-release@v1
@@ -72,9 +71,3 @@ jobs:
         asset_path: ./dist/spatialmp4-*.whl
         asset_name: spatialmp4-*.whl
         asset_content_type: application/zip
-    - name: Publish release
-      uses: StuYarrow/publish-release@v1.1.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        id: ${{ steps.create_release.outputs.id }}
