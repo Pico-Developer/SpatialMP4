@@ -289,9 +289,9 @@ index 8a094b1ea0..6fec10583f 100644
 +        value_str_right[strlen(value_str_right) - 1] = '\0';
 +    }
 +    av_log(c->fc, AV_LOG_DEBUG, "DSTR box: %s, %s\n", value_str_left, value_str_right);
-+    
++
 +    AVStream *st = c->fc->streams[c->fc->nb_streams-1];
-+    
++
 +    // Store individual components in metadata
 +    av_dict_set(&st->metadata, "camera_model", camera_model, 0);
 +    av_dict_set(&st->metadata, "distortion_model", distortion_model, 0);
@@ -299,7 +299,7 @@ index 8a094b1ea0..6fec10583f 100644
 +    if (st->codecpar->codec_id != 0) { // 0 is for depth track
 +        av_dict_set(&st->metadata, "distortion_params_1", value_str_right, 0);
 +    }
-+    
++
 +    av_freep(&value_str_left);
 +    av_freep(&value_str_right);
 +    av_freep(&additional_data);
@@ -307,7 +307,7 @@ index 8a094b1ea0..6fec10583f 100644
 +}
 +
 +static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom atom)
-+{   
++{
 +    if (!c || !c->fc) {
 +        av_log(NULL, AV_LOG_ERROR, "Invalid context for TBTM box\n");
 +        return AVERROR_INVALIDDATA;

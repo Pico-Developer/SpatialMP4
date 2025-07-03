@@ -15,6 +15,7 @@
  */
 
 #include "RgbdUtils.h"
+#include <iostream>
 #include <Eigen/Eigen>
 #include <opencv2/core/eigen.hpp>
 

@@ -12,11 +12,12 @@ configure_file(
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic-functions")
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 option(BUILD_ANDROID "whether build for android" OFF)
 option(BUILD_TESTING "whether build unit test" ON)
-option(BUILD_PYTHON_BINDINGS "whether build python bindings" ON)
+option(BUILD_PYTHON "whether build python bindings" ON)
 
 if(BUILD_ANDROID)
     message(FATAL_ERROR "Don't support android building.")
@@ -32,7 +33,7 @@ include(cmake/fmt.cmake)
 include(cmake/eigen.cmake)
 include(cmake/sophus.cmake)
 
-if(BUILD_PYTHON_BINDINGS)
+if(BUILD_PYTHON)
     include(cmake/pybind11.cmake)
 endif()
  
@@ -42,15 +43,26 @@ set(SRC
     ./src/spatialmp4/reader.cc
 )
 
-add_library(${CMAKE_PROJECT_NAME}_lib SHARED ${SRC})
+add_library(${CMAKE_PROJECT_NAME}_lib STATIC ${SRC})
+# if(APPLE)
+#     add_library(${CMAKE_PROJECT_NAME}_lib STATIC ${SRC})
+# else()
+#     add_library(${CMAKE_PROJECT_NAME}_lib SHARED ${SRC})
+# endif()
+
 target_include_directories(${CMAKE_PROJECT_NAME}_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
+
+if(EXISTS $ENV{CONDA_PREFIX}/lib)
+    link_directories($ENV{CONDA_PREFIX}/lib)
+endif()
+
 target_link_libraries(${CMAKE_PROJECT_NAME}_lib PUBLIC
     PkgConfig::LIBAV
-    lib_opencv
+    PkgConfig::OpenCV
     spdlog
     fmt::fmt
     Eigen3::Eigen
@@ -59,7 +71,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}_lib PUBLIC
 # On newer versions of macOS (>=10.15) and with newer compilers,
 # filesystem is part of the standard library and doesn't need explicit linking
 if(UNIX AND NOT APPLE)
-    target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE stdc++fs)
+    target_link_libraries(${CMAKE_PROJECT_NAME}_lib PRIVATE stdc++fs)
 endif()
 
 
@@ -132,7 +144,7 @@ if(BUILD_TESTING)
     endif()
 endif()
 
-if(BUILD_PYTHON_BINDINGS)
+if(BUILD_PYTHON)
     add_subdirectory(bindings)
 endif()
 

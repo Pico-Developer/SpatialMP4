@@ -23,11 +23,25 @@
 #include "utilities/PointcloudUtils.h"
 #include "spdlog/spdlog.h"
 #include <sophus/se3.hpp>
+#include <fstream>
 
 const std::string kTestFile = "video/test.mp4";
 const std::string kVisRgbDir = "./tmp_vis_rgb";
 const std::string kVisRgbDir2 = "./tmp_vis_rgb_random";
 const std::string kVisDepthDir = "./tmp_vis_depth";
+
+std::string GetVideoPath() {
+  const char* env = std::getenv("VIDEO");
+  if (env) {
+    return std::string(env);
+  }
+  std::ifstream file(kTestFile);
+  if (!file.good()) {
+    throw std::runtime_error("Please set VIDEO environment variable!");
+  }
+  file.close();
+  return kTestFile;
+}
 
 TEST(SpatialMP4Test, FilenameCheck_ReaderTest) {
   EXPECT_THROW(SpatialML::Reader(std::string("video/3DVideo_30min Stationary.mp4")), std::runtime_error);
@@ -35,7 +49,7 @@ TEST(SpatialMP4Test, FilenameCheck_ReaderTest) {
 }
 
 TEST(SpatialMP4Test, Basic_ReaderTest) {
-  SpatialML::Reader reader(kTestFile);
+  SpatialML::Reader reader(GetVideoPath());
   ASSERT_TRUE(reader.HasRGB());
   ASSERT_TRUE(reader.HasDepth());
   ASSERT_TRUE(reader.HasPose());
@@ -112,7 +126,7 @@ TEST(SpatialMP4Test, DepthFirst_ReaderTest) {
   }
   fs::create_directory(kVisDepthDir);
 
-  SpatialML::Reader reader(kTestFile);
+  SpatialML::Reader reader(GetVideoPath());
   reader.SetReadMode(SpatialML::Reader::ReadMode::DEPTH_FIRST);
   reader.Reset();
   while (reader.HasNext()) {
@@ -207,7 +221,7 @@ TEST(SpatialMP4Test, RgbOnly_ReaderTest) {
   }
   fs::create_directory(kVisRgbDir);
 
-  SpatialML::Reader reader(kTestFile);
+  SpatialML::Reader reader(GetVideoPath());
   ASSERT_TRUE(reader.HasRGB());
   reader.Reset();
   reader.SetReadMode(SpatialML::Reader::ReadMode::RGB_ONLY);
@@ -222,7 +236,7 @@ TEST(SpatialMP4Test, RgbOnly_ReaderTest) {
 }
 
 TEST(SpatialMP4Test, DepthOnly_ReaderTest) {
-  SpatialML::Reader reader(kTestFile);
+  SpatialML::Reader reader(GetVideoPath());
   ASSERT_TRUE(reader.HasDepth());
   reader.Reset();
   reader.SetReadMode(SpatialML::Reader::ReadMode::DEPTH_ONLY);
@@ -243,7 +257,7 @@ TEST(SpatialMP4Test, RandomAccess_ReaderTest) {
   fs::create_directory(kVisRgbDir2);
 
   SpatialML::RandomAccessVideoReader reader;
-  if (!reader.Open(kTestFile, true)) {
+  if (!reader.Open(GetVideoPath(), true)) {
     std::cerr << "Failed to open video" << std::endl;
     return;
   }

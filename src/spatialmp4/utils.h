@@ -18,6 +18,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <iomanip>
 #include <opencv2/opencv.hpp>
 #include "utilities/SyncPose.hpp"
 #include "spatialmp4/data_types.h"
@@ -34,9 +36,9 @@ namespace SpatialML {
 
 // 导出宏定义
 #if defined(_WIN32)
-#  define SPATIALMP4_EXPORT __declspec(dllexport)
+#define SPATIALMP4_EXPORT __declspec(dllexport)
 #else
-#  define SPATIALMP4_EXPORT __attribute__((visibility("default")))
+#define SPATIALMP4_EXPORT __attribute__((visibility("default")))
 #endif
 
 std::vector<double> String2DoubleVector(const std::string& str);

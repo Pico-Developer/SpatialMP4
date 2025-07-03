@@ -6,7 +6,13 @@
 
 # 设置 PKG_CONFIG_PATH 环境变量
 set(ffmpeg_HOME ${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_ffmpeg/ffmpeg_install)
+set(PIXI_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/.pixi/envs/default)
+if(EXISTS "${PIXI_ROOT}") 
+    set(ffmpeg_HOME "${PIXI_ROOT}")
+endif()
+
 set(ENV{PKG_CONFIG_PATH} "${ffmpeg_HOME}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+set(ENV{PKG_CONFIG} "pkg-config --static")
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
