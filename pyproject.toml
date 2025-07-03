@@ -26,6 +26,16 @@ dependencies = [
     "numpy",
     "opencv-python"
 ]
+dependencies-dev = [
+    "pytest",
+    "setuptools",
+    "pip",
+    "wheel",
+    "twine",
+    "cmeel",
+    "cmake",
+    "build",
+]
 
 [project.urls]
 repository = "https://github.com/Pico-Developer/SpatialMP4"

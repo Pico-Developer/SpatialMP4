@@ -51,3 +51,6 @@ wheelhouse
 
 # mac
 .DS_Store
+
+# python build
+dist/*
