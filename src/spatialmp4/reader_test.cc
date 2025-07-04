@@ -29,6 +29,7 @@ const std::string kTestFile = "video/test.mp4";
 const std::string kVisRgbDir = "./tmp_vis_rgb";
 const std::string kVisRgbDir2 = "./tmp_vis_rgb_random";
 const std::string kVisDepthDir = "./tmp_vis_depth";
+const std::string kVisRgbdDir = "./tmp_vis_rgbd";
 
 std::string GetVideoPath() {
   const char* env = std::getenv("VIDEO");
@@ -198,6 +199,8 @@ TEST(SpatialMP4Test, DepthFirst_ReaderTest) {
   }
 }
 
+
+
 TEST(SpatialMP4Test, HeadModel_ReaderTest) {
   // test data
   auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
@@ -281,5 +284,43 @@ TEST(SpatialMP4Test, RandomAccess_ReaderTest) {
       ss << std::setw(4) << std::setfill('0') << i;
       cv::imwrite(kVisRgbDir2 + "/" + ss.str() + "_" + std::to_string(frame->pts) + ".png", rgb_mats.first);
     }
+  }
+}
+
+TEST(SpatialMP4Test, DepthFirst_ReaderTest_Rgbd) {
+  // spdlog::set_level(spdlog::level::debug); // debug mode
+
+  if (fs::exists(kVisRgbdDir)) {
+    fs::remove_all(kVisRgbdDir);
+  }
+  fs::create_directory(kVisRgbdDir);
+
+  SpatialML::Reader reader(GetVideoPath());
+  reader.SetReadMode(SpatialML::Reader::ReadMode::DEPTH_FIRST);
+  reader.Reset();
+  while (reader.HasNext()) {
+    Utilities::Rgbd rgbd;
+    reader.Load(rgbd);
+
+    std::cout << "rgbd frame: \t" << rgbd.timestamp << std::endl;
+    std::stringstream ss;
+    ss << std::setw(4) << std::setfill('0') << reader.GetIndex();
+
+    cv::Mat vis_projected_depth;
+    Utilities::VisualizeMat(rgbd.depth, vis_projected_depth, "projected_depth", &rgbd.rgb, 0, 5, true);
+
+    std::string filename = kVisRgbdDir + "/depth_" + ss.str() + ".png";
+    cv::putText(vis_projected_depth, "depth_" + std::to_string(rgbd.timestamp), cv::Point(100, 150),
+                cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+    cv::imwrite(filename, vis_projected_depth);
+
+    // projection depth to pointcloud
+    Utilities::Pointcloud pcd;
+    Utilities::RgbdToPointcloud(rgbd.rgb, rgbd.depth, reader.GetRgbIntrinsicsLeft().as_cvmat(), pcd, 10);
+    std::string pcd_filename = kVisRgbdDir + "/pcd_" + ss.str() + ".obj";
+    Utilities::SavePointcloudToFile(pcd_filename, pcd);
+
+    EXPECT_TRUE(rgbd.depth.data != nullptr);
+    EXPECT_TRUE(rgbd.rgb.data != nullptr);
   }
 }

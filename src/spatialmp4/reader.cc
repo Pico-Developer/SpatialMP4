@@ -310,7 +310,7 @@ Reader::Reader(const std::string& filename)
   if (has_rgb_) {
     rgb_fps_ =
         pFormatCtx_->streams[rgb_frame_id_]->r_frame_rate.num / pFormatCtx_->streams[rgb_frame_id_]->r_frame_rate.den;
-    rgb_width_ = pFormatCtx_->streams[rgb_frame_id_]->codecpar->width;
+    rgb_width_ = pFormatCtx_->streams[rgb_frame_id_]->codecpar->width / 2;  // side-by-side stereo
     rgb_height_ = pFormatCtx_->streams[rgb_frame_id_]->codecpar->height;
 
     AVDictionaryEntry* tag = NULL;
@@ -332,13 +332,15 @@ Reader::Reader(const std::string& filename)
         rgb_extrinsics_left_.extrinsics =
             cv::Matx44d(extrinsics_data[0], extrinsics_data[1], extrinsics_data[2], extrinsics_data[3],
                         extrinsics_data[4], extrinsics_data[5], extrinsics_data[6], extrinsics_data[7],
-                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11], 0, 0, 0, 1);
+                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11],
+                        0, 0, 0, 1);
       } else if (std::string(tag->key).find("ecam_1") != std::string::npos) {
         std::vector<double> extrinsics_data = SpatialML::String2DoubleVector(tag->value);
         rgb_extrinsics_right_.extrinsics =
             cv::Matx44d(extrinsics_data[0], extrinsics_data[1], extrinsics_data[2], extrinsics_data[3],
                         extrinsics_data[4], extrinsics_data[5], extrinsics_data[6], extrinsics_data[7],
-                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11], 0, 0, 0, 1);
+                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11],
+                        0, 0, 0, 1);
       } else if (std::string(tag->key).find("distortion_model") != std::string::npos) {
         is_rgb_distorted_ = true;
         rgb_distortion_model_ = tag->value;
@@ -499,6 +501,18 @@ int Reader::GetIndex() const {
   }
 }
 
+int Reader::GetFrameCount() const {
+  switch (read_mode_) {
+    case ReadMode::DEPTH_FIRST:
+    case ReadMode::DEPTH_ONLY:
+      return keyframes_depth.size();
+    case ReadMode::RGB_ONLY:
+      return allframes_rgb.size();
+    default:
+      return -1;
+  }
+}
+
 void Reader::Load(rgb_frame& frame_rgb, depth_frame& frame_depth) {
   if (pFormatCtx_ == NULL) {
     std::cerr << "pFormatCtx_ is NULL" << std::endl;
@@ -629,6 +643,61 @@ void Reader::Load(depth_frame& frame_depth) {
     }
     av_packet_unref(&current_packet_);
   }
+}
+
+void Reader::Load(Utilities::Rgbd& rgbd, bool densify) {
+  if (read_mode_ != ReadMode::DEPTH_FIRST) {
+    std::cerr << "Read mode should be DEPTH_FIRST, but got " << ReadMode2String(read_mode_) << std::endl;
+    return;
+  }
+  if (!has_depth_ || !has_rgb_) {
+    std::cerr << "depth frame or rgb frame is not found" << std::endl;
+    return;
+  }
+
+  rgb_frame frame_rgb;
+  depth_frame frame_depth;
+  Load(frame_rgb, frame_depth);
+
+  // project depth to rgb
+  cv::Mat projected_depth;
+  auto T_I_Srgb = GetRgbExtrinsicsLeft().as_se3();
+  auto T_I_Stof = GetDepthExtrinsics().as_se3();
+
+  // Read head_model_offset from /system/etc/pvr/config/config_head.txt#line_1
+  auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
+
+  // Note:
+  //   W: World
+  //   H: Head
+  //   S: Sensor, rgb sensor or depth sensor
+  //   I: IMU
+  auto T_W_Hrgb = frame_rgb.pose.as_se3();
+  auto T_W_Htof = frame_depth.pose.as_se3();
+  Sophus::SE3d T_W_Irgb, T_W_Itof;
+  Utilities::HeadToImu(T_W_Hrgb, head_model_offset, T_W_Irgb);
+  Utilities::HeadToImu(T_W_Htof, head_model_offset, T_W_Itof);
+  auto T_W_Srgb = T_W_Irgb * T_I_Srgb;
+  auto T_W_Stof = T_W_Itof * T_I_Stof;
+  auto T_Srgb_Stof = T_W_Srgb.inverse() * T_W_Stof;
+
+  cv::Matx33d K_tof = GetDepthIntrinsics().as_cvmat();
+  if (densify) {
+    // densify depth by nearest neighbor interpolation
+    float scale = frame_rgb.left_rgb.cols / frame_depth.depth.cols;
+    cv::resize(frame_depth.depth, frame_depth.depth,
+     cv::Size(frame_rgb.left_rgb.cols, frame_rgb.left_rgb.rows), cv::INTER_NEAREST);
+    K_tof = GetDepthIntrinsics().as_cvmat();
+    K_tof(0, 0) *= scale;
+    K_tof(1, 1) *= scale;
+    K_tof(0, 2) *= scale;
+    K_tof(1, 2) *= scale;
+  }
+
+  Utilities::ProjectDepthToRgb(frame_depth.depth, frame_rgb.left_rgb, GetRgbIntrinsicsLeft().as_cvmat(),
+                               K_tof, T_Srgb_Stof, projected_depth, true);
+  
+  rgbd = Utilities::Rgbd(frame_rgb.left_rgb, projected_depth, frame_depth.timestamp, T_W_Stof);
 }
 
 void Reader::LoadAllPoseData(int frame_id) {

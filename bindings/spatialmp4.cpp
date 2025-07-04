@@ -7,6 +7,7 @@
 #include "spatialmp4/data_types.h"
 #include "spatialmp4/utils.h"
 #include "spatialmp4/version.h"
+#include "spatialmp4/utilities/RgbdUtils.h"
 
 namespace py = pybind11;
 
@@ -185,8 +186,14 @@ PYBIND11_MODULE(spatialmp4, m) {
             self.Load(rgb_frame, depth_frame);
             return py::make_tuple(rgb_frame, depth_frame);
         })
+        .def("load_rgbd", [](SpatialML::Reader& self, bool densify = false) {
+            Utilities::Rgbd rgbd;
+            self.Load(rgbd, densify);
+            return rgbd;
+        })
         .def("reset", &SpatialML::Reader::Reset)
-        .def("get_index", &SpatialML::Reader::GetIndex);
+        .def("get_index", &SpatialML::Reader::GetIndex)
+        .def("get_frame_count", &SpatialML::Reader::GetFrameCount);
 
     // Bind ReadMode enum
     py::enum_<SpatialML::Reader::ReadMode>(m, "ReadMode")
@@ -210,4 +217,32 @@ PYBIND11_MODULE(spatialmp4, m) {
         })
         .def("get_frame_count", &SpatialML::RandomAccessVideoReader::GetFrameCount)
         .def("debug", &SpatialML::RandomAccessVideoReader::Debug);
+
+    // Bind Utilities::Rgbd struct
+    py::class_<Utilities::Rgbd>(m, "Rgbd")
+        .def(py::init<>())
+        .def_readwrite("timestamp", &Utilities::Rgbd::timestamp)
+        .def_property("rgb",
+            [](const Utilities::Rgbd &f) { return mat_to_numpy(f.rgb); },
+            [](Utilities::Rgbd &f, py::array_t<uint8_t> arr) {
+                // TODO: implement setter if needed
+            })
+        .def_property("depth",
+            [](const Utilities::Rgbd &f) { return depth_mat_to_numpy(f.depth); },
+            [](Utilities::Rgbd &f, py::array_t<float> arr) {
+                // TODO: implement setter if needed
+            })
+        .def_property_readonly("T_W_S",
+            [](const Utilities::Rgbd &f) {
+                // Expose as Eigen::Matrix4d for now
+                Eigen::Matrix4d T = f.T_W_S.matrix();
+                return T;
+            })
+        .def("__repr__", [](const Utilities::Rgbd &f) {
+            std::ostringstream ss;
+            ss << "Rgbd(timestamp=" << f.timestamp << ", rgb shape=[" << f.rgb.rows << "," << f.rgb.cols << "," << f.rgb.channels() << "]";
+            ss << ", depth shape=[" << f.depth.rows << "," << f.depth.cols << "]";
+            ss << ")";
+            return ss.str();
+        });
 } 

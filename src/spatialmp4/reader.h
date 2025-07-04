@@ -29,6 +29,7 @@
 #include <unordered_map>
 #include <opencv2/opencv.hpp>
 #include "utilities/SyncPose.hpp"
+#include "utilities/RgbdUtils.h"
 #include "spatialmp4/data_types.h"
 
 extern "C" {
@@ -141,8 +142,10 @@ class SPATIALMP4_EXPORT Reader {
   void Load(rgb_frame& rgb_frame);
   void Load(depth_frame& depth_frame);
   void Load(rgb_frame& rgb_frame, depth_frame& depth_frame);
+  void Load(Utilities::Rgbd& rgbd, bool densify = false);
   void Reset();
   int GetIndex() const;
+  int GetFrameCount() const;
 
  protected:
   void LoadAllPoseData(int frame_id);

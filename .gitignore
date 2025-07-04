@@ -54,3 +54,9 @@ wheelhouse
 
 # python build
 dist/*
+
+# cache files
+*.png
+*.pkl
+*.ply
+*.json
