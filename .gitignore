@@ -60,3 +60,6 @@ dist/*
 *.pkl
 *.ply
 *.json
+
+# examples
+examples/python/view_control.pkl

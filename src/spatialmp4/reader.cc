@@ -332,15 +332,13 @@ Reader::Reader(const std::string& filename)
         rgb_extrinsics_left_.extrinsics =
             cv::Matx44d(extrinsics_data[0], extrinsics_data[1], extrinsics_data[2], extrinsics_data[3],
                         extrinsics_data[4], extrinsics_data[5], extrinsics_data[6], extrinsics_data[7],
-                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11],
-                        0, 0, 0, 1);
+                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11], 0, 0, 0, 1);
       } else if (std::string(tag->key).find("ecam_1") != std::string::npos) {
         std::vector<double> extrinsics_data = SpatialML::String2DoubleVector(tag->value);
         rgb_extrinsics_right_.extrinsics =
             cv::Matx44d(extrinsics_data[0], extrinsics_data[1], extrinsics_data[2], extrinsics_data[3],
                         extrinsics_data[4], extrinsics_data[5], extrinsics_data[6], extrinsics_data[7],
-                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11],
-                        0, 0, 0, 1);
+                        extrinsics_data[8], extrinsics_data[9], extrinsics_data[10], extrinsics_data[11], 0, 0, 0, 1);
       } else if (std::string(tag->key).find("distortion_model") != std::string::npos) {
         is_rgb_distorted_ = true;
         rgb_distortion_model_ = tag->value;
@@ -531,6 +529,7 @@ void Reader::Load(rgb_frame& frame_rgb, depth_frame& frame_depth) {
       rgb_frame_pts_queue_.addPose(rgb_timestamp, rgb_frame_pts);
     }
   }
+  // rgb_frame_pts_queue_.print();
 
   av_seek_frame(pFormatCtx_, depth_frame_id_, keyframes_depth[keyframe_depth_idx_], AVSEEK_FLAG_BACKWARD);
   while (av_read_frame(pFormatCtx_, &current_packet_) >= 0) {
@@ -552,7 +551,13 @@ void Reader::Load(rgb_frame& frame_rgb, depth_frame& frame_depth) {
   int64_t target_rgb_pts;
   double time_diff;
   double depth_timestamp = frame_depth.timestamp;
-  rgb_frame_pts_queue_.findNearestPose(depth_timestamp, target_rgb_pts, time_diff);
+  if (!rgb_frame_pts_queue_.findNearestPose(depth_timestamp, target_rgb_pts, time_diff)) {
+    std::cerr << "findNearestPose failed" << std::endl;
+    return;
+  }
+  if (time_diff > 0.1) {
+    spdlog::warn("time_diff is too large: {:.4f}", time_diff);
+  }
 
   // 2. get nearest rgb packet
   auto compare = [](int64_t a, int64_t b) { return a < b; };
@@ -685,8 +690,11 @@ void Reader::Load(Utilities::Rgbd& rgbd, bool densify) {
   if (densify) {
     // densify depth by nearest neighbor interpolation
     float scale = frame_rgb.left_rgb.cols / frame_depth.depth.cols;
-    cv::resize(frame_depth.depth, frame_depth.depth,
-     cv::Size(frame_rgb.left_rgb.cols, frame_rgb.left_rgb.rows), cv::INTER_NEAREST);
+    std::cout << "frame_rgb.left_rgb.cols: " << frame_rgb.left_rgb.cols << std::endl;
+    std::cout << "frame_depth.depth.cols: " << frame_depth.depth.cols << std::endl;
+    std::cout << "scale: " << scale << std::endl;
+    cv::resize(frame_depth.depth, frame_depth.depth, cv::Size(frame_rgb.left_rgb.cols, frame_rgb.left_rgb.rows),
+               cv::INTER_NEAREST);
     K_tof = GetDepthIntrinsics().as_cvmat();
     K_tof(0, 0) *= scale;
     K_tof(1, 1) *= scale;
@@ -694,9 +702,9 @@ void Reader::Load(Utilities::Rgbd& rgbd, bool densify) {
     K_tof(1, 2) *= scale;
   }
 
-  Utilities::ProjectDepthToRgb(frame_depth.depth, frame_rgb.left_rgb, GetRgbIntrinsicsLeft().as_cvmat(),
-                               K_tof, T_Srgb_Stof, projected_depth, true);
-  
+  Utilities::ProjectDepthToRgb(frame_depth.depth, frame_rgb.left_rgb, GetRgbIntrinsicsLeft().as_cvmat(), K_tof,
+                               T_Srgb_Stof, projected_depth, true);
+
   rgbd = Utilities::Rgbd(frame_rgb.left_rgb, projected_depth, frame_depth.timestamp, T_W_Stof);
 }
 
