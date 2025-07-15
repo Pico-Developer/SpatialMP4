@@ -21,10 +21,15 @@ def pico_pose_to_open3d(extrinsic):
 
 def main(
     video_file: str,
+    depth_only: bool = False,
 ):
     """Visualize spatialmp4 using rerun."""
     reader = sm.Reader(video_file)
-    reader.set_read_mode(sm.ReadMode.DEPTH_FIRST)
+
+    if depth_only:
+        reader.set_read_mode(sm.ReadMode.DEPTH_ONLY)
+    else:
+        reader.set_read_mode(sm.ReadMode.DEPTH_FIRST)
 
     if not reader.has_depth():
         typer.echo(typer.style(f"No depth found in input file", fg=typer.colors.RED))
@@ -59,18 +64,41 @@ def main(
     rr.log("world", rr.ViewCoordinates.RIGHT_HAND_Y_UP, static=True)    # same as open3d
     view_coord = rr.ViewCoordinates.UBR
 
-    width = reader.get_rgb_width()
-    height = reader.get_rgb_height()
-    fx = float(reader.get_rgb_intrinsics_left().fx)
-    fy = float(reader.get_rgb_intrinsics_left().fy)
-    cx = float(reader.get_rgb_intrinsics_left().cx)
-    cy = float(reader.get_rgb_intrinsics_left().cy)
+
+    if depth_only:
+        width = reader.get_depth_width()
+        height = reader.get_depth_height()
+        fx = float(reader.get_depth_intrinsics().fx)
+        fy = float(reader.get_depth_intrinsics().fy)
+        cx = float(reader.get_depth_intrinsics().cx)
+        cy = float(reader.get_depth_intrinsics().cy)
+    else:
+        width = reader.get_rgb_width()
+        height = reader.get_rgb_height()
+        fx = float(reader.get_rgb_intrinsics_left().fx)
+        fy = float(reader.get_rgb_intrinsics_left().fy)
+        cx = float(reader.get_rgb_intrinsics_left().cx)
+        cy = float(reader.get_rgb_intrinsics_left().cy)
+
     while reader.has_next():
-        rgbd = reader.load_rgbd(True)
-        print(f"Loading frame {reader.get_index() + 1} / {reader.get_frame_count()}, timestamp: {rgbd.timestamp}")
+        if depth_only:
+            depth_frame = reader.load_depth()
+            timestamp = depth_frame.timestamp
+            depth_np = depth_frame.depth
+            TWH = depth_frame.pose    # T_W_H
+            if TWH.timestamp == 0:
+                continue    # invalid pose data
+            extrinsic = np.eye(4)
+            extrinsic[:3, 3] = [TWH.x, TWH.y, TWH.z]
+            extrinsic[:3, :3] = Rotation.from_quat((TWH.qx, TWH.qy, TWH.qz, TWH.qw)).as_matrix()
+        else:
+            rgbd = reader.load_rgbd(True)
+            timestamp = rgbd.timestamp
+            depth_np = rgbd.depth
+            extrinsic = rgbd.T_W_S
+        print(f"Loading frame {reader.get_index() + 1} / {reader.get_frame_count()}, timestamp: {timestamp}")
 
         # preprocess on depthmap
-        depth_np = rgbd.depth
         depth_uint16 = (depth_np * 1000).astype(np.uint16)
         sobelx = cv2.Sobel(depth_uint16, cv2.CV_32F, 1, 0, ksize=3)
         sobely = cv2.Sobel(depth_uint16, cv2.CV_32F, 0, 1, ksize=3)
@@ -78,10 +106,9 @@ def main(
         depth_np[grad_mag > 500] = 0
         depth_np[(depth_np < 0.2) | (depth_np > 5)] = 0
 
-        extrinsic = rgbd.T_W_S
         extrinsic = pico_pose_to_open3d(extrinsic)
 
-        rr.set_time_seconds("time", rgbd.timestamp)
+        rr.set_time_seconds("time", timestamp)
         rr.log("world/xyz", rr.Arrows3D(vectors=[[1, 0, 0], [0, 1, 0], [0, 0, 1]], colors=[[255, 0, 0], [0, 255, 0], [0, 0, 255]]))
         rr.log("world/camera/image", rr.Pinhole(
             resolution=[width, height],
@@ -92,8 +119,9 @@ def main(
         position = extrinsic[:3, 3]
         rotation = Rotation.from_matrix(extrinsic[:3, :3]).as_quat()
         rr.log("world/camera", rr.Transform3D(translation=position, rotation=rr.Quaternion(xyzw=rotation)))
-        rr.log("world/camera/image/rgb", rr.Image(rgbd.rgb, color_model="BGR").compress(jpeg_quality=95))
         rr.log("world/camera/image/depth", rr.DepthImage(depth_np, meter=1.0))
+        if not depth_only:
+            rr.log("world/camera/image/rgb", rr.Image(rgbd.rgb, color_model="BGR").compress(jpeg_quality=95))
 
 
 if __name__ == "__main__":#

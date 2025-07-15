@@ -103,7 +103,10 @@ def generate_pcd(
     )
 
     while reader.has_next():
-        rgbd = reader.load_rgbd(True)
+        # rgbd = reader.load_rgbd(True)
+        rgb_frame, depth_frame = reader.load_both()
+        import ipdb; ipdb.set_trace()
+
         if topk is not None and reader.get_index() >= topk:
             break
         if skip_last_frame and reader.get_index() == reader.get_frame_count() - 1:
@@ -133,6 +136,9 @@ def generate_pcd(
 
         pcd_i = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic)
         pcd_i.transform(np.linalg.inv(extrinsic))
+
+        o3d.io.write_point_cloud(output+f"_{reader.get_index()}.ply", pcd_i)
+
         pcd_i.paint_uniform_color([0, 0, 1])
         frames.append(pcd_i)
         

@@ -4,6 +4,7 @@ import spatialmp4
 def test_version():
     print(spatialmp4.__version__)
 
+
 def test_reader():
     reader = spatialmp4.Reader("video/test.mp4")
     

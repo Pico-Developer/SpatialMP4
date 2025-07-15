@@ -18,9 +18,9 @@
 
 // 导出宏定义
 #if defined(_WIN32)
-#  define SPATIALMP4_EXPORT __declspec(dllexport)
+#define SPATIALMP4_EXPORT __declspec(dllexport)
 #else
-#  define SPATIALMP4_EXPORT __attribute__((visibility("default")))
+#define SPATIALMP4_EXPORT __attribute__((visibility("default")))
 #endif
 
 #include <iostream>
@@ -140,7 +140,7 @@ class SPATIALMP4_EXPORT Reader {
   void SetReadMode(ReadMode mode) { read_mode_ = mode; }
   bool HasNext() const;
   void Load(rgb_frame& rgb_frame);
-  void Load(depth_frame& depth_frame);
+  void Load(depth_frame& depth_frame, bool raw_head_pose = false);
   void Load(rgb_frame& rgb_frame, depth_frame& depth_frame);
   void Load(Utilities::Rgbd& rgbd, bool densify = false);
   void Reset();
@@ -149,10 +149,11 @@ class SPATIALMP4_EXPORT Reader {
 
  protected:
   void LoadAllPoseData(int frame_id);
-  void ParseDepthFrame(const AVPacket& pkt, depth_frame& depth_frame);
+  void ParseDepthFrame(const AVPacket& pkt, depth_frame& depth_frame, bool raw_head_pose = false);
   void ParseRgbFrame(const AVPacket& pkt, rgb_frame& rgb_frame, bool skip = false);
 
   bool SeekToRgbKeyframe(int64_t timestamp);
+  bool IsLastFrame();
 
  private:
   std::string filename_;
