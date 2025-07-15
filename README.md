@@ -65,7 +65,7 @@ bash scripts/install_deps.sh
 mkdir build && cd build
 
 # Configure project
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON=OFF
 
 # Build
 make -j$(nproc)  # On Linux

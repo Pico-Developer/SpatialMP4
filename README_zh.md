@@ -65,7 +65,7 @@ bash scripts/install_deps.sh
 mkdir build && cd build
 
 # 配置项目
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON=OFF
 
 # 编译
 make -j$(nproc)  # Linux系统
