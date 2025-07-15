@@ -115,7 +115,7 @@ bash scripts/install_deps.sh
 ### 4. Build and Install 
 
 ```bash
-pip3 instsall .
+pip3 install .
 ```
 
 ## 📖 Usage Guide (cpp)
@@ -317,7 +317,7 @@ struct pose_frame {
 };
 ```
 
-## 📖 Usage Guide (cpp)
+## 📖 Usage Guide (python)
 
 
 ### Basic Usage Example
@@ -430,7 +430,7 @@ Main class for reading SpatialMP4 files.
 
 ### Advanced Usage
 
-- See `examples/python/visualize_rerun.py` and `examples/python/generate_pcd.py` for advanced usage, including point cloud generation and visualization with Open3D or Rerun.
+- See [examples/python/visualize_rerun.py](./examples/python/visualize_rerun.py) and [examples/python/generate_pcd.py](./examples/python/generate_pcd.py) for advanced usage, including point cloud generation and visualization with Open3D or Rerun.
 - All image and depth data are returned as NumPy arrays for easy integration with OpenCV, Open3D, PyTorch, etc.
 - Camera parameters and pose data can be used for 3D reconstruction and SLAM applications.
 
