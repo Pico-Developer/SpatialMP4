@@ -342,7 +342,6 @@ while reader.has_next():
     print("RGB时间戳:", rgb_frame.timestamp, "位姿:", pose.x, pose.y, pose.z)
 ```
 
----
 
 ## 📚 API 参考 (python)
 
@@ -406,8 +405,6 @@ SpatialMP4 文件读取主类。
 - `extrinsics: np.ndarray` — 4x4外参矩阵。
 - `as_cvmat()` — 以OpenCV矩阵返回。
 - `as_se3()` — 以SE(3)返回（高级用法）。
-
----
 
 ### 枚举类型
 

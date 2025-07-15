@@ -408,7 +408,6 @@ Main class for reading SpatialMP4 files.
 - `as_cvmat()` — Return as OpenCV matrix.
 - `as_se3()` — Return as SE(3) (advanced use).
 
----
 
 ### Enums
 
@@ -426,15 +425,12 @@ Main class for reading SpatialMP4 files.
 - `POSE` — Pose data stream
 - `DEPTH` — Depth stream
 
----
 
 ### Advanced Usage
 
 - See [examples/python/visualize_rerun.py](./examples/python/visualize_rerun.py) and [examples/python/generate_pcd.py](./examples/python/generate_pcd.py) for advanced usage, including point cloud generation and visualization with Open3D or Rerun.
 - All image and depth data are returned as NumPy arrays for easy integration with OpenCV, Open3D, PyTorch, etc.
 - Camera parameters and pose data can be used for 3D reconstruction and SLAM applications.
-
----
 
 
 ## 🐛 Debugging and Logging
