@@ -1,0 +1,77 @@
+name: Build Wheels
+
+permissions:
+  contents: "write"
+  id-token: "write"
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install cmeel[build]
+        pip install build 
+
+    - name: Build wheels
+      env:
+        CIBW_BEFORE_BUILD: |
+          bash scripts/install_deps.sh
+          bash scripts/build_ffmpeg.sh
+        CIBW_BUILD: "cp3*-*"
+        CIBW_SKIP: "pp* *-win32 *-win_amd64"
+      run: |
+        cmake --version
+        bash scripts/install_deps.sh
+        bash scripts/build_ffmpeg.sh
+        python -m build --wheel
+
+  release:
+    needs: build_wheels
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          Changes in this Release
+          - First release
+        draft: true
+        prerelease: false
+    - name: Upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/spatialmp4-*.whl
+        asset_name: spatialmp4-*.whl
+        asset_content_type: application/zip

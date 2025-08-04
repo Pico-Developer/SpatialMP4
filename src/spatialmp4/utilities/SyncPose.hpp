@@ -78,14 +78,28 @@ class SynchronizedQueue {
     }
   }
 
+  void print() const {
+    std::unique_lock<std::mutex> lock(mtx);
+    // print top3 and tail 3
+    for (int i = 0; i < 3; i++) {
+      std::cout << "timestamp: " << pose_queue[i].timestamp << ", data: " << pose_queue[i].data << std::endl;
+    }
+    std::cout << "..." << std::endl;
+    for (int i = pose_queue.size() - 3; i < pose_queue.size(); i++) {
+      std::cout << "timestamp: " << pose_queue[i].timestamp << ", data: " << pose_queue[i].data << std::endl;
+    }
+  }
+
   bool findNearestPose(double rgb_timestamp, PoseType& pose, double& time_diff) {
     std::unique_lock<std::mutex> lock(mtx);
     if (pose_queue.empty()) {
+      std::cerr << "pose_queue is empty" << std::endl;
       return false;
     }
-    if (rgb_timestamp < pose_queue.front().timestamp || rgb_timestamp > pose_queue.back().timestamp) {
-      return false;
-    }
+    // if (rgb_timestamp < pose_queue.front().timestamp || rgb_timestamp > pose_queue.back().timestamp) {
+    //   std::cerr << "rgb_timestamp is out of range" << std::endl;
+    //   return false;
+    // }
 
     auto it = std::lower_bound(pose_queue.begin(), pose_queue.end(), rgb_timestamp,
                                [](const TimestampedData<PoseType>& data, double ts) { return data.timestamp < ts; });

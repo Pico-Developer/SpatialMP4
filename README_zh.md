@@ -36,7 +36,7 @@
 - [**fmt**](https://github.com/fmtlib/fmt): 现代C++格式化库
 - [**Google Test**](https://github.com/google/googletest): 单元测试框架 (可选)
 
-## 🛠️ 编译安装
+## 🛠️ 编译安装 (cpp)
 
 ### 1. 克隆仓库
 
@@ -65,12 +65,14 @@ bash scripts/install_deps.sh
 mkdir build && cd build
 
 # 配置项目
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON=OFF
 
 # 编译
 make -j$(nproc)  # Linux系统
 make -j$(sysctl -n hw.ncpu)  # macOS系统
 ```
+如果编译报错，请参考[FAQ for installation](docs/install_faq.md)。如果还是解决不了，
+欢迎[提issue](https://github.com/Pico-Developer/SpatialMP4/issues)，我们会及时帮助你。
 
 ### 5. 运行测试 (可选)
 
@@ -83,6 +85,35 @@ make -j$(sysctl -n hw.ncpu)  # macOS系统
 # 运行测试
 cd ..
 ./build/test_reader
+```
+
+## 🛠️ 编译安装 (python)
+
+### 1. 克隆代码
+
+```bash
+git clone https://github.com/Pico-Developer/SpatialMP4
+cd SpatialMP4
+```
+
+### 2. 编译FFmpeg
+
+Build `ffmpeg` first:
+
+```bash
+bash scripts/build_ffmpeg.sh
+```
+
+### 3. 安装依赖
+
+```bash
+bash scripts/install_deps.sh
+```
+
+### 4. 构建安装
+
+```bash
+pip3 install .
 ```
 
 ## 📖 使用指南
@@ -284,20 +315,120 @@ struct pose_frame {
 };
 ```
 
-## 🔍 工具函数
+## 📖 使用指南 (python)
 
-### 图像处理 (OpencvUtils)
-- `VisualizeMat()`: 可视化矩阵数据
-- `DumpMat()` / `LoadMat()`: 保存/加载矩阵
-- `ConcatenateMat()`: 拼接多个图像
+### 基本用法示例
 
-### RGBD处理 (RgbdUtils)  
-- `ProjectDepthToRgb()`: 深度投影到RGB
-- `RgbdToPointcloud()`: RGBD转点云
+```python
+import spatialmp4
 
-### 点云处理 (PointcloudUtils)
-- `SavePointcloudToFile()`: 保存点云文件
-- 支持OBJ格式输出
+# 创建读取器
+reader = spatialmp4.Reader("your_video.mp4")
+
+# 检查可用流
+print("Has RGB:", reader.has_rgb())
+print("Has Depth:", reader.has_depth())
+print("Has Pose:", reader.has_pose())
+
+# 设置读取模式
+reader.set_read_mode(spatialmp4.ReadMode.DEPTH_FIRST)
+
+# 读取帧
+while reader.has_next():
+    rgb_frame, depth_frame = reader.load_both()
+    left_rgb = rgb_frame.left_rgb  # numpy数组 (H, W, 3)
+    depth = depth_frame.depth      # numpy数组 (H, W)
+    pose = rgb_frame.pose
+    print("RGB时间戳:", rgb_frame.timestamp, "位姿:", pose.x, pose.y, pose.z)
+```
+
+
+## 📚 API 参考 (python)
+
+### 主要类与方法
+
+#### `spatialmp4.Reader`
+SpatialMP4 文件读取主类。
+
+- `Reader(filename: str)` — 创建读取器。
+- `has_rgb() -> bool` — 是否包含RGB数据。
+- `has_depth() -> bool` — 是否包含深度数据。
+- `has_pose() -> bool` — 是否包含位姿数据。
+- `has_audio() -> bool` — 是否包含音频数据。
+- `has_disparity() -> bool` — 是否包含视差数据。
+- `get_duration() -> float` — 获取视频时长（秒）。
+- `get_rgb_fps() -> float` — 获取RGB帧率。
+- `get_depth_fps() -> float` — 获取深度帧率。
+- `get_rgb_width() -> int` — 获取RGB宽度。
+- `get_rgb_height() -> int` — 获取RGB高度。
+- `get_depth_width() -> int` — 获取深度宽度。
+- `get_depth_height() -> int` — 获取深度高度。
+- `get_rgb_intrinsics_left() -> CameraIntrinsics` — 获取左RGB相机内参。
+- `get_rgb_intrinsics_right() -> CameraIntrinsics` — 获取右RGB相机内参。
+- `get_rgb_extrinsics_left() -> CameraExtrinsics` — 获取左RGB相机外参。
+- `get_rgb_extrinsics_right() -> CameraExtrinsics` — 获取右RGB相机外参。
+- `get_depth_intrinsics() -> CameraIntrinsics` — 获取深度相机内参。
+- `get_depth_extrinsics() -> CameraExtrinsics` — 获取深度相机外参。
+- `get_pose_frames() -> List[PoseFrame]` — 获取所有位姿帧。
+- `set_read_mode(mode: ReadMode)` — 设置读取模式（见下方枚举）。
+- `has_next() -> bool` — 是否有下一帧。
+- `reset()` — 重置到文件开头。
+- `get_index() -> int` — 获取当前帧索引。
+- `get_frame_count() -> int` — 获取总帧数。
+- `load_rgb() -> RGBFrame` — 读取下一个RGB帧。
+- `load_depth(raw_head_pose: bool = False) -> DepthFrame` — 读取下一个深度帧。
+- `load_both() -> (RGBFrame, DepthFrame)` — 同时读取下一个RGB和深度帧。
+- `load_rgbd(densify: bool = False) -> Rgbd` — 读取RGBD数据（高级用法）。
+
+#### `spatialmp4.RGBFrame`
+- `timestamp: float` — 帧时间戳。
+- `left_rgb: np.ndarray` — 左RGB图像 (H, W, 3, uint8)。
+- `right_rgb: np.ndarray` — 右RGB图像 (H, W, 3, uint8)。
+- `pose: PoseFrame` — 对应位姿数据。
+
+#### `spatialmp4.DepthFrame`
+- `timestamp: float` — 帧时间戳。
+- `depth: np.ndarray` — 深度图像 (H, W, float32, 单位米)。
+- `pose: PoseFrame` — 对应位姿数据。
+
+#### `spatialmp4.PoseFrame`
+- `timestamp: float` — 位姿时间戳。
+- `x, y, z: float` — 位置。
+- `qw, qx, qy, qz: float` — 四元数旋转。
+- `as_se3()` — 转换为SE(3)表示（需Sophus/Eigen，高级用法）。
+
+#### `spatialmp4.CameraIntrinsics`
+- `fx, fy, cx, cy: float` — 相机内参。
+- `as_cvmat()` — 以OpenCV矩阵返回。
+
+#### `spatialmp4.CameraExtrinsics`
+- `extrinsics: np.ndarray` — 4x4外参矩阵。
+- `as_cvmat()` — 以OpenCV矩阵返回。
+- `as_se3()` — 以SE(3)返回（高级用法）。
+
+### 枚举类型
+
+#### `spatialmp4.ReadMode`
+- `RGB_ONLY` — 仅读取RGB帧。
+- `DEPTH_ONLY` — 仅读取深度帧。
+- `DEPTH_FIRST` — 同时读取RGB和深度帧，以深度为参考。
+
+#### `spatialmp4.StreamType`
+- `UNKNOWN` — 未知流类型
+- `AUDIO` — 音频流
+- `AUDIO_2` — 第二音频流
+- `RGB` — RGB视频流
+- `DISPARITY` — 视差流
+- `POSE` — 位姿数据流
+- `DEPTH` — 深度流
+
+
+### 高级用法
+
+- 参见 [examples/python/visualize_rerun.py](./examples/python/visualize_rerun.py) 和 [examples/python/generate_pcd.py](./examples/python/generate_pcd.py) 获取点云生成、Open3D/Rerun可视化等高级用法。
+- 所有图像和深度数据均以NumPy数组返回，便于与OpenCV、Open3D、PyTorch等生态集成。
+- 相机参数和位姿数据可用于三维重建和SLAM等应用。
+
 
 ## 🐛 调试和日志
 

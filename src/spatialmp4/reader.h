@@ -15,12 +15,21 @@
  */
 
 #pragma once
+
+// 导出宏定义
+#if defined(_WIN32)
+#define SPATIALMP4_EXPORT __declspec(dllexport)
+#else
+#define SPATIALMP4_EXPORT __attribute__((visibility("default")))
+#endif
+
 #include <iostream>
 #include <vector>
 #include <string>
 #include <unordered_map>
 #include <opencv2/opencv.hpp>
 #include "utilities/SyncPose.hpp"
+#include "utilities/RgbdUtils.h"
 #include "spatialmp4/data_types.h"
 
 extern "C" {
@@ -45,7 +54,7 @@ namespace SpatialML {
  * Random access video reader.
  * This class is used to read a video file in random access mode.
  */
-class RandomAccessVideoReader {
+class SPATIALMP4_EXPORT RandomAccessVideoReader {
  public:
   RandomAccessVideoReader() = default;
   ~RandomAccessVideoReader();
@@ -73,7 +82,7 @@ class RandomAccessVideoReader {
  * This class is used to read a SpatialMP4 file.
  * The file format is described in the SpatialMP4 format specification.
  */
-class Reader {
+class SPATIALMP4_EXPORT Reader {
  public:
   enum ReadMode {
     RGB_ONLY,
@@ -131,17 +140,20 @@ class Reader {
   void SetReadMode(ReadMode mode) { read_mode_ = mode; }
   bool HasNext() const;
   void Load(rgb_frame& rgb_frame);
-  void Load(depth_frame& depth_frame);
+  void Load(depth_frame& depth_frame, bool raw_head_pose = false);
   void Load(rgb_frame& rgb_frame, depth_frame& depth_frame);
+  void Load(Utilities::Rgbd& rgbd, bool densify = false);
   void Reset();
   int GetIndex() const;
+  int GetFrameCount() const;
 
  protected:
   void LoadAllPoseData(int frame_id);
-  void ParseDepthFrame(const AVPacket& pkt, depth_frame& depth_frame);
+  void ParseDepthFrame(const AVPacket& pkt, depth_frame& depth_frame, bool raw_head_pose = false);
   void ParseRgbFrame(const AVPacket& pkt, rgb_frame& rgb_frame, bool skip = false);
 
   bool SeekToRgbKeyframe(int64_t timestamp);
+  bool IsLastFrame();
 
  private:
   std::string filename_;

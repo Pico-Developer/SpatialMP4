@@ -310,7 +310,7 @@ Reader::Reader(const std::string& filename)
   if (has_rgb_) {
     rgb_fps_ =
         pFormatCtx_->streams[rgb_frame_id_]->r_frame_rate.num / pFormatCtx_->streams[rgb_frame_id_]->r_frame_rate.den;
-    rgb_width_ = pFormatCtx_->streams[rgb_frame_id_]->codecpar->width;
+    rgb_width_ = pFormatCtx_->streams[rgb_frame_id_]->codecpar->width / 2;  // side-by-side stereo
     rgb_height_ = pFormatCtx_->streams[rgb_frame_id_]->codecpar->height;
 
     AVDictionaryEntry* tag = NULL;
@@ -499,6 +499,18 @@ int Reader::GetIndex() const {
   }
 }
 
+int Reader::GetFrameCount() const {
+  switch (read_mode_) {
+    case ReadMode::DEPTH_FIRST:
+    case ReadMode::DEPTH_ONLY:
+      return keyframes_depth.size();
+    case ReadMode::RGB_ONLY:
+      return allframes_rgb.size();
+    default:
+      return -1;
+  }
+}
+
 void Reader::Load(rgb_frame& frame_rgb, depth_frame& frame_depth) {
   if (pFormatCtx_ == NULL) {
     std::cerr << "pFormatCtx_ is NULL" << std::endl;
@@ -517,6 +529,7 @@ void Reader::Load(rgb_frame& frame_rgb, depth_frame& frame_depth) {
       rgb_frame_pts_queue_.addPose(rgb_timestamp, rgb_frame_pts);
     }
   }
+  // rgb_frame_pts_queue_.print();
 
   av_seek_frame(pFormatCtx_, depth_frame_id_, keyframes_depth[keyframe_depth_idx_], AVSEEK_FLAG_BACKWARD);
   while (av_read_frame(pFormatCtx_, &current_packet_) >= 0) {
@@ -525,7 +538,7 @@ void Reader::Load(rgb_frame& frame_rgb, depth_frame& frame_depth) {
         av_packet_unref(&current_packet_);
         continue;
       }
-      ParseDepthFrame(current_packet_, frame_depth);
+      ParseDepthFrame(current_packet_, frame_depth, true);
       keyframe_depth_idx_++;
       break;
     }
@@ -538,7 +551,13 @@ void Reader::Load(rgb_frame& frame_rgb, depth_frame& frame_depth) {
   int64_t target_rgb_pts;
   double time_diff;
   double depth_timestamp = frame_depth.timestamp;
-  rgb_frame_pts_queue_.findNearestPose(depth_timestamp, target_rgb_pts, time_diff);
+  if (!rgb_frame_pts_queue_.findNearestPose(depth_timestamp, target_rgb_pts, time_diff)) {
+    std::cerr << "findNearestPose failed" << std::endl;
+    return;
+  }
+  if (time_diff > 0.1) {
+    spdlog::warn("time_diff is too large: {:.4f}", time_diff);
+  }
 
   // 2. get nearest rgb packet
   auto compare = [](int64_t a, int64_t b) { return a < b; };
@@ -608,7 +627,7 @@ void Reader::Load(rgb_frame& frame_rgb) {
   }
 }
 
-void Reader::Load(depth_frame& frame_depth) {
+void Reader::Load(depth_frame& frame_depth, bool raw_head_pose) {
   if (pFormatCtx_ == NULL) {
     std::cerr << "pFormatCtx_ is NULL" << std::endl;
     return;
@@ -623,12 +642,70 @@ void Reader::Load(depth_frame& frame_depth) {
   }
   while (av_read_frame(pFormatCtx_, &current_packet_) >= 0) {
     if (current_packet_.stream_index == depth_frame_id_) {
-      ParseDepthFrame(current_packet_, frame_depth);
+      ParseDepthFrame(current_packet_, frame_depth, raw_head_pose);
       keyframe_depth_idx_++;
       break;
     }
     av_packet_unref(&current_packet_);
   }
+}
+
+void Reader::Load(Utilities::Rgbd& rgbd, bool densify) {
+  if (read_mode_ != ReadMode::DEPTH_FIRST) {
+    std::cerr << "Read mode should be DEPTH_FIRST, but got " << ReadMode2String(read_mode_) << std::endl;
+    return;
+  }
+  if (!has_depth_ || !has_rgb_) {
+    std::cerr << "depth frame or rgb frame is not found" << std::endl;
+    return;
+  }
+
+  rgb_frame frame_rgb;
+  depth_frame frame_depth;
+  Load(frame_rgb, frame_depth);
+
+  // project depth to rgb
+  cv::Mat projected_depth;
+  auto T_I_Srgb = GetRgbExtrinsicsLeft().as_se3();
+  auto T_I_Stof = GetDepthExtrinsics().as_se3();
+
+  // Read head_model_offset from /system/etc/pvr/config/config_head.txt#line_1
+  auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
+
+  // Note:
+  //   W: World
+  //   H: Head
+  //   S: Sensor, rgb sensor or depth sensor
+  //   I: IMU
+  auto T_W_Hrgb = frame_rgb.pose.as_se3();
+  auto T_W_Htof = frame_depth.pose.as_se3();
+  Sophus::SE3d T_W_Irgb, T_W_Itof;
+  Utilities::HeadToImu(T_W_Hrgb, head_model_offset, T_W_Irgb);
+  Utilities::HeadToImu(T_W_Htof, head_model_offset, T_W_Itof);
+  auto T_W_Srgb = T_W_Irgb * T_I_Srgb;
+  auto T_W_Stof = T_W_Itof * T_I_Stof;
+  auto T_Srgb_Stof = T_W_Srgb.inverse() * T_W_Stof;
+
+  cv::Matx33d K_tof = GetDepthIntrinsics().as_cvmat();
+  if (densify) {
+    // densify depth by nearest neighbor interpolation
+    float scale = frame_rgb.left_rgb.cols / frame_depth.depth.cols;
+    cv::resize(frame_depth.depth, frame_depth.depth, cv::Size(frame_rgb.left_rgb.cols, frame_rgb.left_rgb.rows),
+               cv::INTER_NEAREST);
+    K_tof = GetDepthIntrinsics().as_cvmat();
+    K_tof(0, 0) *= scale;
+    K_tof(1, 1) *= scale;
+    K_tof(0, 2) *= scale;
+    K_tof(1, 2) *= scale;
+  }
+
+  Utilities::ProjectDepthToRgb(frame_depth.depth, frame_rgb.left_rgb, GetRgbIntrinsicsLeft().as_cvmat(), K_tof,
+                               T_Srgb_Stof, projected_depth, true);
+  // timestamp is the time of depth frame
+  // T_W_Srgb is the transform from world to rgb sensor
+  rgbd = Utilities::Rgbd(frame_rgb.left_rgb, projected_depth, frame_depth.timestamp, T_W_Srgb);
+  // Why it is bad with T_W_Srgb?
+  // rgbd = Utilities::Rgbd(frame_rgb.left_rgb, projected_depth, frame_depth.timestamp, T_W_Stof);
 }
 
 void Reader::LoadAllPoseData(int frame_id) {
@@ -654,7 +731,7 @@ void Reader::LoadAllPoseData(int frame_id) {
   av_seek_frame(pFormatCtx_, -1, 0, AVSEEK_FLAG_BACKWARD);
 }
 
-void Reader::ParseDepthFrame(const AVPacket& pkt, depth_frame& frame_depth) {
+void Reader::ParseDepthFrame(const AVPacket& pkt, depth_frame& frame_depth, bool raw_head_pose) {
   frame_depth.timestamp = pkt.pts * av_q2d(pFormatCtx_->streams[depth_frame_id_]->time_base);
   frame_depth.depth = cv::Mat(depth_height_, depth_width_, CV_16UC1, pkt.data);
   frame_depth.depth.convertTo(frame_depth.depth, CV_32FC1, 0.001);  // unit: meter
@@ -662,10 +739,40 @@ void Reader::ParseDepthFrame(const AVPacket& pkt, depth_frame& frame_depth) {
   double time_diff;
   pose_frames_.findNearestPose(frame_depth.timestamp, target_pose, time_diff);
   frame_depth.pose = target_pose;
-  if (time_diff <= find_pose_distance_) {
+
+  bool pose_is_valid = false;
+  if (time_diff <= find_pose_distance_ || IsLastFrame()) {
     frame_depth.pose = target_pose;
+    pose_is_valid = true;
   } else {
     frame_depth.pose = pose_frame();
+    pose_is_valid = false;
+  }
+  if (!raw_head_pose && pose_is_valid) {
+    // Read head_model_offset from /system/etc/pvr/config/config_head.txt#line_1
+    auto head_model_offset = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
+    // convert T_W_Htof to T_W_Stof
+    // Note:
+    //   W: World
+    //   H: Head
+    //   S: Sensor, rgb sensor or depth sensor
+    //   I: IMU
+    auto T_W_Htof = frame_depth.pose.as_se3();
+    auto T_I_Stof = GetDepthExtrinsics().as_se3();
+
+    Sophus::SE3d T_W_Itof;
+    Utilities::HeadToImu(T_W_Htof, head_model_offset, T_W_Itof);
+    auto T_W_Stof = T_W_Itof * T_I_Stof;
+
+    Eigen::Vector3d t = T_W_Stof.translation();
+    Eigen::Quaterniond q = T_W_Stof.unit_quaternion();
+    frame_depth.pose.x = t.x();
+    frame_depth.pose.y = t.z();
+    frame_depth.pose.z = t.z();
+    frame_depth.pose.qx = q.x();
+    frame_depth.pose.qy = q.y();
+    frame_depth.pose.qz = q.z();
+    frame_depth.pose.qw = q.w();
   }
 }
 
@@ -690,7 +797,7 @@ void Reader::ParseRgbFrame(const AVPacket& pkt, rgb_frame& frame_rgb, bool skip)
     pose_frame target_pose;
     double time_diff;
     pose_frames_.findNearestPose(frame_rgb.timestamp, target_pose, time_diff);
-    if (time_diff <= find_pose_distance_) {
+    if (time_diff <= find_pose_distance_ || IsLastFrame()) {
       frame_rgb.pose = target_pose;
     } else {
       frame_rgb.pose = pose_frame();
@@ -711,6 +818,11 @@ bool Reader::SeekToRgbKeyframe(int64_t target_pts) {
 
   spdlog::debug("seek to keyframe_pts: {}", target_pts);
   return true;
+}
+
+bool Reader::IsLastFrame() {
+  std::cout << "GetIndex: " << GetIndex() << ", GetFrameCount: " << GetFrameCount() << std::endl;
+  return GetIndex() == GetFrameCount() - 1;
 }
 
 }  // namespace SpatialML

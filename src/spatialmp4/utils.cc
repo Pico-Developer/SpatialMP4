@@ -17,6 +17,7 @@
 #include "spatialmp4/utils.h"
 #include <iostream>
 #include <unordered_map>
+#include <iomanip>
 
 namespace SpatialML {
 
@@ -172,21 +173,20 @@ std::string FFmpegErrorString(int errnum) {
 }
 
 std::string microsecondsToDateTime(int64_t timestamp_microseconds) {
-    // split seconds and microseconds
-    int64_t timestamp_seconds = timestamp_microseconds / 1000000;
-    int64_t microseconds = timestamp_microseconds % 1000000;
-    
-    // convert to time structure
-    std::time_t time = timestamp_seconds;
-    std::tm* tm = std::localtime(&time);
-    
-    // format output
-    std::ostringstream oss;
-    oss << std::put_time(tm, "%Y-%m-%d %H:%M:%S");
-    oss << "." << std::setfill('0') << std::setw(6) << microseconds;
-    
-    return oss.str();
-}
+  // split seconds and microseconds
+  int64_t timestamp_seconds = timestamp_microseconds / 1000000;
+  int64_t microseconds = timestamp_microseconds % 1000000;
 
+  // convert to time structure
+  std::time_t time = timestamp_seconds;
+  std::tm* tm = std::localtime(&time);
+
+  // format output
+  std::ostringstream oss;
+  oss << std::put_time(tm, "%Y-%m-%d %H:%M:%S");
+  oss << "." << std::setfill('0') << std::setw(6) << microseconds;
+
+  return oss.str();
+}
 
 }  // namespace SpatialML

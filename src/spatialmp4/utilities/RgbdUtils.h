@@ -33,4 +33,19 @@ void ImuToHead(const Sophus::SE3d& in, const Eigen::Vector3d& head_model_offset,
 
 void HeadToImu(const Sophus::SE3d& in, const Eigen::Vector3d& head_model_offset, Sophus::SE3d& out);
 
+struct Rgbd {
+  Rgbd(const cv::Mat& rgb, const cv::Mat& depth, double timestamp, const Sophus::SE3d& T_W_S)
+      : rgb(rgb), depth(depth), timestamp(timestamp), T_W_S(T_W_S) {}
+  Rgbd() = default;
+  Rgbd(const Rgbd& other) = default;
+  Rgbd& operator=(const Rgbd& other) = default;
+  Rgbd(Rgbd&& other) = default;
+  Rgbd& operator=(Rgbd&& other) = default;
+
+  cv::Mat rgb;
+  cv::Mat depth;
+  double timestamp;
+  Sophus::SE3d T_W_S;
+};
+
 }  // namespace Utilities

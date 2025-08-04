@@ -37,13 +37,29 @@
 
 tmp*
 build/*
+build-editable/*
 
 # ffmpeg build
 scripts/build_ffmpeg
 
-# python
+# python venv
 .venv
-pyc
+*.pyc
+
+# cibuildwheel
+wheelhouse
 
 # mac
 .DS_Store
+
+# python build
+dist/*
+
+# cache files
+*.png
+*.pkl
+*.ply
+*.json
+
+# examples
+examples/python/view_control.pkl

@@ -18,6 +18,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <iomanip>
 #include <opencv2/opencv.hpp>
 #include "utilities/SyncPose.hpp"
 #include "spatialmp4/data_types.h"
@@ -32,6 +34,13 @@ extern "C" {
 
 namespace SpatialML {
 
+// 导出宏定义
+#if defined(_WIN32)
+#define SPATIALMP4_EXPORT __declspec(dllexport)
+#else
+#define SPATIALMP4_EXPORT __attribute__((visibility("default")))
+#endif
+
 std::vector<double> String2DoubleVector(const std::string& str);
 
 std::string StreamTypeToString(StreamType type);
@@ -40,7 +49,13 @@ void PrintStreamInfo(AVFormatContext* pFormatCtx);
 
 std::unordered_map<int, StreamType> GetStreamTypeInfo(AVFormatContext* pFormatCtx);
 
-bool FrameToBGR24(AVFrame* rgb_frame, std::pair<cv::Mat, cv::Mat>& rgb_pair);
+/**
+ * Convert AVFrame to BGR24 format.
+ * @param rgb_frame Input AVFrame
+ * @param rgb_pair Output pair of cv::Mat for left and right images
+ * @return true if successful, false otherwise
+ */
+SPATIALMP4_EXPORT bool FrameToBGR24(AVFrame* rgb_frame, std::pair<cv::Mat, cv::Mat>& rgb_pair);
 
 std::string FFmpegErrorString(int errnum);
 
