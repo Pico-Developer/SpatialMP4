@@ -126,7 +126,7 @@ build_install_opencv() {
     BUILD_FLAGS="
         -D CMAKE_BUILD_TYPE=RELEASE
         -D BUILD_LIST=core,imgproc,imgcodecs
-        -D WITH_TBB=ON
+        -D WITH_TBB=OFF
         -D WITH_OPENEXR=ON
         -D WITH_EIGEN=ON
         -D WITH_GSTREAMER=OFF
