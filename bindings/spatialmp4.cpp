@@ -153,7 +153,7 @@ PYBIND11_MODULE(spatialmp4, m) {
 
   // Bind Reader class
   py::class_<SpatialML::Reader>(m, "Reader")
-      .def(py::init<const std::string &>())
+      .def(py::init<const std::string &, const std::string &>(), py::arg("filename"), py::arg("log_level") = "quiet")
       .def("has_rgb", &SpatialML::Reader::HasRGB)
       .def("has_depth", &SpatialML::Reader::HasDepth)
       .def("has_pose", &SpatialML::Reader::HasPose)

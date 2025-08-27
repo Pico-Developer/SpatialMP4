@@ -226,8 +226,31 @@ AVFrame* RandomAccessVideoReader::process_frame(AVFrame* frame) {
 
 /******************** Reader ********************/
 
-Reader::Reader(const std::string& filename)
+void SetFFmpegLogLevel(const std::string& log_level) {
+  static const std::unordered_map<std::string, int> log_level_map = {
+    {"quiet", AV_LOG_QUIET},
+    {"panic", AV_LOG_PANIC},
+    {"fatal", AV_LOG_FATAL},
+    {"error", AV_LOG_ERROR},
+    {"warning", AV_LOG_WARNING},
+    {"info", AV_LOG_INFO},
+    {"verbose", AV_LOG_VERBOSE},
+    {"debug", AV_LOG_DEBUG},
+    {"trace", AV_LOG_TRACE}
+  };
+
+  auto it = log_level_map.find(log_level);
+  if (it != log_level_map.end()) {
+    av_log_set_level(it->second);
+  } else {
+    spdlog::warn("Invalid FFmpeg log level: '{}'. Using 'warning' as default.", log_level);
+    av_log_set_level(AV_LOG_WARNING);
+  }
+}
+
+Reader::Reader(const std::string& filename, const std::string& log_level)
     : filename_(filename),
+      log_level_(log_level),
       read_mode_(ReadMode::DEPTH_FIRST),
       pFormatCtx_(NULL),
       has_rgb_(false),
@@ -253,7 +276,8 @@ Reader::Reader(const std::string& filename)
       keyframe_rgb_idx_(0),
       allframe_rgb_idx_(0),
       keyframe_depth_idx_(0) {
-  // av_log_set_level(AV_LOG_DEBUG);
+  
+  SetFFmpegLogLevel(log_level_);
 
   if (filename_.find(' ') != std::string::npos) {
     throw std::runtime_error("Find blank in filename, please fix it.");
@@ -821,7 +845,7 @@ bool Reader::SeekToRgbKeyframe(int64_t target_pts) {
 }
 
 bool Reader::IsLastFrame() {
-  std::cout << "GetIndex: " << GetIndex() << ", GetFrameCount: " << GetFrameCount() << std::endl;
+  // std::cout << "GetIndex: " << GetIndex() << ", GetFrameCount: " << GetFrameCount() << std::endl;
   return GetIndex() == GetFrameCount() - 1;
 }
 
