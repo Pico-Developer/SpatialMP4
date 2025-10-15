@@ -268,6 +268,10 @@ camera_extrinsics GetRgbExtrinsicsLeft() const;   // Left RGB camera extrinsics
 camera_extrinsics GetRgbExtrinsicsRight() const;  // Right RGB camera extrinsics
 camera_intrinsics GetDepthIntrinsics() const;     // Depth camera intrinsics
 camera_extrinsics GetDepthExtrinsics() const;     // Depth camera extrinsics
+bool IsRgbDistorted() const;                      // Whether RGB stream applies lens distortion
+std::string GetRgbDistortionModel() const;        // Distortion model name (e.g., kBrownConrady)
+std::string GetRgbDistortionParamsLeft() const;   // Left RGB distortion parameters
+std::string GetRgbDistortionParamsRight() const;  // Right RGB distortion parameters
 ```
 
 #### Reading Control Methods
@@ -371,6 +375,10 @@ Main class for reading SpatialMP4 files.
 - `get_rgb_extrinsics_right() -> CameraExtrinsics` — Get right RGB camera extrinsics.
 - `get_depth_intrinsics() -> CameraIntrinsics` — Get depth camera intrinsics.
 - `get_depth_extrinsics() -> CameraExtrinsics` — Get depth camera extrinsics.
+- `is_rgb_distorted() -> bool` — Whether the RGB stream includes lens distortion.
+- `get_rgb_distortion_model() -> str` — Distortion model name (`"kBrownConrady"`, etc.).
+- `get_rgb_distortion_params_left() -> str` — Serialized left-eye distortion parameters.
+- `get_rgb_distortion_params_right() -> str` — Serialized right-eye distortion parameters.
 - `get_pose_frames() -> List[PoseFrame]` — Get all pose frames.
 - `set_read_mode(mode: ReadMode)` — Set reading mode (see enums below).
 - `has_next() -> bool` — Whether there is a next frame.

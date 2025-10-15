@@ -266,6 +266,10 @@ camera_extrinsics GetRgbExtrinsicsLeft() const;   // 左RGB相机外参
 camera_extrinsics GetRgbExtrinsicsRight() const;  // 右RGB相机外参
 camera_intrinsics GetDepthIntrinsics() const;     // 深度相机内参
 camera_extrinsics GetDepthExtrinsics() const;     // 深度相机外参
+bool IsRgbDistorted() const;                      // RGB流是否包含畸变
+std::string GetRgbDistortionModel() const;        // 畸变模型名称（例如kBrownConrady）
+std::string GetRgbDistortionParamsLeft() const;   // 左目畸变参数
+std::string GetRgbDistortionParamsRight() const;  // 右目畸变参数
 ```
 
 #### 读取控制方法
@@ -369,6 +373,10 @@ SpatialMP4 文件读取主类。
 - `get_rgb_extrinsics_right() -> CameraExtrinsics` — 获取右RGB相机外参。
 - `get_depth_intrinsics() -> CameraIntrinsics` — 获取深度相机内参。
 - `get_depth_extrinsics() -> CameraExtrinsics` — 获取深度相机外参。
+- `is_rgb_distorted() -> bool` — RGB流是否包含畸变。
+- `get_rgb_distortion_model() -> str` — 畸变模型名称（如 `"kBrownConrady"`）。
+- `get_rgb_distortion_params_left() -> str` — 左目畸变参数字符串。
+- `get_rgb_distortion_params_right() -> str` — 右目畸变参数字符串。
 - `get_pose_frames() -> List[PoseFrame]` — 获取所有位姿帧。
 - `set_read_mode(mode: ReadMode)` — 设置读取模式（见下方枚举）。
 - `has_next() -> bool` — 是否有下一帧。
