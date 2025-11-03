@@ -1,0 +1,270 @@
+diff --git a/libavcodec/packet.h b/libavcodec/packet.h
+index 71bc2e0575..352d11f665 100644
+--- a/libavcodec/packet.h
++++ b/libavcodec/packet.h
+@@ -353,7 +353,10 @@ enum AVPacketSideDataType {
+      * If its value becomes huge, some code using it
+      * needs to be updated as it assumes it to be smaller than other limits.
+      */
+-    AV_PKT_DATA_NB
++    AV_PKT_DATA_NB,
++    AV_PKT_DATA_ECAM,
++    AV_PKT_DATA_ICAM,
++    AV_PKT_DATA_DISTORTION_COEFFICIENTS
+ };
+ 
+ /**
+diff --git a/libavformat/movenc.c b/libavformat/movenc.c
+index 4bc8bd1b2a..deace44642 100644
+--- a/libavformat/movenc.c
++++ b/libavformat/movenc.c
+@@ -2057,7 +2057,13 @@ static unsigned int mov_find_codec_tag(AVFormatContext *s, MOVTrack *track)
+             !av_match_ext(s->url, "m4b"))
+             av_log(s, AV_LOG_WARNING, "Warning, extension is not .m4a nor .m4v "
+                    "Quicktime/Ipod might not play the file\n");
+-
++    if (track->par->codec_tag == MKTAG('r', 'a', 'w', '1')){
++        //track->tag = track->par->codec_tag;
++        return  track->par->codec_tag;
++    }
++    else if (track->par->codec_tag == MKTAG('m', 'e', 't', 't')){
++        return track->par->codec_tag;
++    }
+     if (track->mode == MODE_MOV) {
+         return mov_get_codec_tag(s, track);
+     } else
+@@ -2630,6 +2636,8 @@ static int mov_write_ccst_tag(AVIOContext *pb)
+     return update_size(pb, pos);
+ }
+ 
++
++
+ static int mov_write_aux_tag(AVIOContext *pb, const char *aux_type)
+ {
+     int64_t pos = avio_tell(pb);
+@@ -2640,6 +2648,177 @@ static int mov_write_aux_tag(AVIOContext *pb, const char *aux_type)
+     return update_size(pb, pos);
+ }
+ 
++static void mov_write_dfmt_tag(AVIOContext *pb, MOVTrack *track){
++    //int64_t pos = avio_tell(pb);
++    avio_wb32(pb, 20); // size
++    ffio_wfourcc(pb, "dfmt");
++    AVDictionaryEntry *t1 = av_dict_get(track->st->metadata, "data_accuracy", NULL, 0);
++    AVDictionaryEntry *t2 = av_dict_get(track->st->metadata, "depth_legal_range", NULL, 0);
++    AVDictionaryEntry *t3 = av_dict_get(track->st->metadata, "depth_data_precision", NULL, 0);
++    avio_wb32(pb, t1 ? atoi(t1->value) : 0);
++    avio_wb32(pb, t2 ? atoi(t2->value) : 0);
++    ffio_wfourcc(pb, t3 ? t3->value : "none");
++}
++
++static void mov_write_raw_tag(AVIOContext *pb, MOVTrack *track){
++    //int64_t pos = avio_tell(pb);
++    avio_wb32(pb, 28); // size
++    ffio_wfourcc(pb, "rawC");
++    mov_write_dfmt_tag(pb, track);
++}
++
++static void mov_write_hfov_tag_ext(AVIOContext *pb, MOVTrack *track){
++    AVDictionaryEntry *t = av_dict_get(track->st->metadata, "hfov", NULL, 0);
++    if (t) {
++        avio_wb32(pb, 12); // size
++        ffio_wfourcc(pb, "hfov");
++        avio_wb32(pb, atoi(t->value));
++    }
++}
++
++static void mov_write_vfov_tag(AVIOContext *pb, MOVTrack *track){
++    AVDictionaryEntry *t = av_dict_get(track->st->metadata, "vfov", NULL, 0);
++    if (t) {
++        avio_wb32(pb, 12); // size
++        ffio_wfourcc(pb, "vfov");
++        avio_wb32(pb, atoi(t->value));
++    }
++}
++
++static void mov_write_ecam_tag(AVIOContext *pb, MOVTrack *track){
++    AVPacketSideData *sd = av_packet_side_data_get(track->st->codecpar->coded_side_data,
++                            track->st->codecpar->nb_coded_side_data, AV_PKT_DATA_ECAM);
++    AVDictionaryEntry *t2 = av_dict_get(track->st->metadata, "cam_count", NULL, 0);
++    av_log(NULL, AV_LOG_INFO, "ecam length: %d, cam_count: %d", sd->size, atoi(t2->value));
++    int length ;
++    double mantissa, dvalue;
++    int exponent;
++    if (sd && t2) {
++        length = sd->size;
++        int single_data_size = length / atoi(t2->value);
++        for (int i = 0; i < atoi(t2->value); i++) {
++            int64_t pos = avio_tell(pb);
++            int16_t view_id = i & 0x3FF;
++            avio_wb32(pb, 0); // size
++            ffio_wfourcc(pb, "ecam");
++            avio_wb32(pb, 0);
++            avio_wb16(pb, view_id);
++            avio_w8(pb, 31);
++            avio_w8(pb, 31);
++            for (int j = 0 ; j < single_data_size/sizeof(double); j++) {
++                memcpy(&dvalue, sd->data + i * single_data_size + j * sizeof(double), sizeof(double));
++                mantissa = frexp(dvalue, &exponent);
++                avio_w8(pb, exponent);
++                avio_write(pb, (unsigned char*)&mantissa, sizeof(double));
++            }
++            update_size(pb, pos);
++        }
++    }
++}
++static void mov_write_icam_tag(AVIOContext *pb, MOVTrack *track) {
++    AVPacketSideData *sd = av_packet_side_data_get(track->st->codecpar->coded_side_data,
++                            track->st->codecpar->nb_coded_side_data, AV_PKT_DATA_ICAM);
++    AVDictionaryEntry *t2 = av_dict_get(track->st->metadata, "cam_count", NULL, 0);
++    av_log(NULL, AV_LOG_INFO, "icam length: %d, cam_count: %d", sd->size, atoi(t2->value));
++    int length ;
++    double mantissa, dvalue;
++    int exponent;
++    if (sd && t2) {
++        length = sd->size;
++        int single_data_size = length / atoi(t2->value);
++        for (int i = 0; i < atoi(t2->value); i++) {
++            int64_t pos = avio_tell(pb);
++            int16_t view_id = i & 0x3FF;
++            avio_wb32(pb, 0); // size
++            ffio_wfourcc(pb, "icam");
++            avio_wb32(pb, 0);
++            avio_wb16(pb, view_id);
++            avio_wb32(pb, 31);
++            avio_wb32(pb, 31);
++            avio_wb32(pb, 31);
++            for (int j = 0 ; j < single_data_size/sizeof(double); j++) {
++                memcpy(&dvalue, sd->data + i * single_data_size + j * sizeof(double), sizeof(double));
++                mantissa = frexp(dvalue, &exponent);
++                avio_w8(pb, exponent);
++                avio_write(pb, (unsigned char*)&mantissa, sizeof(double));
++            }
++            update_size(pb, pos);
++        }
++    }
++}
++static void mov_write_dstr_tag(AVIOContext *pb, MOVTrack *track){
++    uint8_t end[1] = {0x00};
++    AVDictionaryEntry *t1 = av_dict_get(track->st->metadata, "distortion_model", NULL, 0);
++    AVDictionaryEntry *t2 = av_dict_get(track->st->metadata, "camera_model", NULL, 0);
++    AVPacketSideData *sd = av_packet_side_data_get(track->st->codecpar->coded_side_data,
++                            track->st->codecpar->nb_coded_side_data, AV_PKT_DATA_DISTORTION_COEFFICIENTS);
++    av_log(NULL, AV_LOG_INFO, "distortion_coefficients length: %d", sd->size);
++    if (t1 && t2 && sd) {
++        int64_t pos = avio_tell(pb);
++        avio_wb32(pb, 0); // size
++        ffio_wfourcc(pb, "dstr");
++        avio_wb32(pb, 0);
++        avio_write(pb, t1->value, strlen(t1->value));
++        avio_write(pb, end, 1);
++        avio_write(pb, t2->value, strlen(t2->value));
++        avio_write(pb, end, 1);
++        avio_write(pb, sd->data, sd->size);
++        update_size(pb, pos);
++    }
++}
++
++static void mov_write_tbtm_tag(AVIOContext *pb, MOVTrack *track){
++    AVDictionaryEntry *t = av_dict_get(track->st->metadata, "track_base_time", NULL, 0);
++    if (t) {
++        avio_wb32(pb, 16); // size
++        ffio_wfourcc(pb, "tbtm");
++        avio_wb64(pb, strtoll(t->value, NULL, 10));
++    }
++}
++
++static int mov_write_mett_tag(AVIOContext *pb, MOVTrack *track){
++    int64_t pos = avio_tell(pb);
++    AVDictionaryEntry *t = av_dict_get(track->st->metadata, "mime_type", NULL, 0);
++    if (t) {
++        avio_wb32(pb, 0); // size
++        ffio_wfourcc(pb, "mett");
++        uint8_t end[1] = {0x00};
++        av_log(NULL, AV_LOG_DEBUG, "mime_type: %s  length: %d  \n", t->value, strlen(t->value));
++        avio_write(pb, t->value, strlen(t->value));
++        avio_write(pb, end, 1);
++        avio_write(pb, t->value, strlen(t->value));
++        avio_write(pb, end, 1);
++
++        AVDictionaryEntry *t1 = av_dict_get(track->st->metadata, "pose_coordinate", NULL, 0);
++        AVDictionaryEntry *t2 = av_dict_get(track->st->metadata, "data_accuracy", NULL, 0);
++        AVDictionaryEntry *t3 = av_dict_get(track->st->metadata, "pose_position", NULL, 0);
++
++        if (t1) {
++            avio_wb32(pb, 16);
++            ffio_wfourcc(pb, "pcrd");
++            avio_wb32(pb, 0);
++            avio_wb32(pb, atoi(t1->value));
++        }
++
++        if (t2) {
++            avio_wb32(pb, 16);
++            ffio_wfourcc(pb, "dtac");
++            avio_wb32(pb, 0);
++            avio_wb32(pb, atoi(t2->value));
++        }
++
++        if (t3) {
++            avio_wb32(pb, 16);
++            ffio_wfourcc(pb, "ppos");
++            avio_wb32(pb, 0);
++            ffio_wfourcc(pb, t3->value);
++        }
++        mov_write_tbtm_tag(pb, track);
++    }
++    return update_size(pb, pos);
++}
++
++
+ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContext *mov, MOVTrack *track)
+ {
+     int ret = AVERROR_BUG;
+@@ -2699,6 +2878,8 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
+     avio_w8(pb, strlen(compressor_name));
+     avio_write(pb, compressor_name, 31);
+ 
++
++
+     if (track->mode == MODE_MOV &&
+        (track->par->codec_id == AV_CODEC_ID_V410 || track->par->codec_id == AV_CODEC_ID_V210))
+         avio_wb16(pb, 0x18);
+@@ -2730,6 +2911,16 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
+     } else
+         avio_wb16(pb, 0xffff); /* Reserved */
+ 
++    if (track->tag ==  MKTAG('r','a','w','1')){
++        mov_write_raw_tag(pb, track);
++        mov_write_hfov_tag_ext(pb, track);
++        mov_write_vfov_tag(pb, track);
++        mov_write_ecam_tag(pb, track);
++        mov_write_icam_tag(pb, track);
++        mov_write_dstr_tag(pb, track);
++        mov_write_tbtm_tag(pb, track);
++    }
++
+     if (track->tag == MKTAG('m','p','4','v'))
+         mov_write_esds_tag(pb, track);
+     else if (track->par->codec_id == AV_CODEC_ID_H263)
+@@ -2748,6 +2939,11 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
+             if (ret < 0)
+                 av_log(mov->fc, AV_LOG_WARNING, "Not writing 'lhvC' atom for multilayer stream.\n");
+         }
++        mov_write_ecam_tag(pb, track);
++        mov_write_icam_tag(pb, track);
++        mov_write_dstr_tag(pb, track);
++        mov_write_tbtm_tag(pb, track);
++
+     } else if (track->par->codec_id == AV_CODEC_ID_VVC)
+         mov_write_vvcc_tag(pb, track);
+     else if (track->par->codec_id == AV_CODEC_ID_H264 && !TAG_IS_AVCI(track->tag)) {
+@@ -3022,7 +3218,8 @@ static int mov_write_stsd_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContext
+         ret = mov_write_tmcd_tag(pb, track);
+     else if (track->par->codec_tag == MKTAG('g','p','m','d'))
+         ret = mov_write_gpmd_tag(pb, track);
+-
++    else if (track->par->codec_tag == MKTAG('m','e','t','t'))
++        ret = mov_write_mett_tag(pb, track);
+     if (ret < 0)
+         return ret;
+ 
