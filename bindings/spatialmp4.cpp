@@ -269,4 +269,39 @@ PYBIND11_MODULE(spatialmp4, m) {
         ss << ")";
         return ss.str();
       });
+
+  m.def(
+      "head_to_imu",
+      [](py::array_t<double> head_pose_array, py::array_t<double> head_model_offset_array) {
+        py::buffer_info pose_info = head_pose_array.request();
+        if (pose_info.ndim != 2 || pose_info.shape[0] != 4 || pose_info.shape[1] != 4) {
+          throw std::invalid_argument("head_pose must be a 4x4 matrix");
+        }
+        py::buffer_info offset_info = head_model_offset_array.request();
+        if (offset_info.ndim != 1 || offset_info.shape[0] != 3) {
+          throw std::invalid_argument("head_model_offset must be a 3-element vector");
+        }
+
+        Eigen::Map<const Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> head_pose_map(
+            static_cast<double *>(pose_info.ptr));
+        Eigen::Map<const Eigen::Vector3d> head_model_offset_map(static_cast<double *>(offset_info.ptr));
+
+        Eigen::Matrix4d head_pose_matrix = head_pose_map;
+        Eigen::Vector3d head_model_offset = head_model_offset_map;
+
+        Eigen::Matrix3d R = head_pose_matrix.block<3, 3>(0, 0);
+        Eigen::Vector3d t = head_pose_matrix.block<3, 1>(0, 3);
+        Eigen::Quaterniond q(R);
+        q.normalize();
+        Sophus::SO3d so3(q);
+        Sophus::SE3d head_pose(so3, t);
+        Sophus::SE3d imu_pose;
+        Utilities::HeadToImu(head_pose, head_model_offset, imu_pose);
+
+        Eigen::Matrix<double, 4, 4, Eigen::RowMajor> result = imu_pose.matrix();
+        py::array_t<double> output({4, 4});
+        std::memcpy(output.mutable_data(), result.data(), sizeof(double) * 16);
+        return output;
+      },
+      py::arg("head_pose"), py::arg("head_model_offset"));
 }

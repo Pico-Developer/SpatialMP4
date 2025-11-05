@@ -44,6 +44,34 @@ std::string GetVideoPath() {
   return kTestFile;
 }
 
+TEST(UtilitiesTest, HeadToImuIdentityOffset) {
+  Sophus::SE3d head_pose = Sophus::SE3d();  // Identity pose
+  Eigen::Vector3d head_model_offset(0.1, -0.2, 0.3);
+  Sophus::SE3d imu_pose;
+  Utilities::HeadToImu(head_pose, head_model_offset, imu_pose);
+
+  Eigen::Vector3d expected_translation(-head_model_offset.y(), head_model_offset.x(), -head_model_offset.z());
+  EXPECT_TRUE(imu_pose.unit_quaternion().isApprox(head_pose.unit_quaternion(), 1e-12));
+  EXPECT_TRUE(imu_pose.translation().isApprox(expected_translation, 1e-12));
+}
+
+TEST(UtilitiesTest, HeadToImuIsInverseOfImuToHead) {
+  const double pi = 3.14159265358979323846;
+  Eigen::Quaterniond q(Eigen::AngleAxisd(pi / 4.0, Eigen::Vector3d::UnitZ()) *
+                       Eigen::AngleAxisd(pi / 6.0, Eigen::Vector3d::UnitY()));
+  Sophus::SE3d imu_pose(q, Eigen::Vector3d(1.0, -2.0, 0.5));
+  Eigen::Vector3d head_model_offset(-0.05, 0.08, -0.12);
+
+  Sophus::SE3d head_pose;
+  Utilities::ImuToHead(imu_pose, head_model_offset, head_pose);
+
+  Sophus::SE3d recovered_imu_pose;
+  Utilities::HeadToImu(head_pose, head_model_offset, recovered_imu_pose);
+
+  EXPECT_TRUE(recovered_imu_pose.unit_quaternion().isApprox(imu_pose.unit_quaternion(), 1e-12));
+  EXPECT_TRUE(recovered_imu_pose.translation().isApprox(imu_pose.translation(), 1e-12));
+}
+
 TEST(SpatialMP4Test, FilenameCheck_ReaderTest) {
   EXPECT_THROW(SpatialML::Reader(std::string("video/3DVideo_30min Stationary.mp4")), std::runtime_error);
   EXPECT_THROW(SpatialML::Reader(std::string("video/dont_exists.mp4")), std::runtime_error);
@@ -198,8 +226,6 @@ TEST(SpatialMP4Test, DepthFirst_ReaderTest) {
     EXPECT_TRUE(rgb_frame.right_rgb.data != nullptr);
   }
 }
-
-
 
 TEST(SpatialMP4Test, HeadModel_ReaderTest) {
   // test data

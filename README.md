@@ -324,6 +324,7 @@ struct pose_frame {
 
 ```python
 import spatialmp4
+import numpy as np
 
 # Create a reader
 reader = spatialmp4.Reader("your_video.mp4")
@@ -343,6 +344,12 @@ while reader.has_next():
     depth = depth_frame.depth      # numpy array (H, W)
     pose = rgb_frame.pose
     print("RGB timestamp:", rgb_frame.timestamp, "Pose:", pose.x, pose.y, pose.z)
+
+# Convert head pose to IMU pose using the utility binding
+head_pose = pose.as_se3().matrix()
+head_model_offset = np.array([-0.05057, -0.01874, 0.04309])
+imu_pose = spatialmp4.head_to_imu(head_pose, head_model_offset)
+print("T_W_I:\n", imu_pose)
 ```
 
 ## 📚 API Reference (python)
@@ -381,6 +388,10 @@ Main class for reading SpatialMP4 files.
 - `load_depth(raw_head_pose: bool = False) -> DepthFrame` — Load the next depth frame.
 - `load_both() -> (RGBFrame, DepthFrame)` — Load the next RGB and depth frames simultaneously.
 - `load_rgbd(densify: bool = False) -> Rgbd` — Load RGBD data (for advanced use).
+
+#### Utility Functions
+
+- `head_to_imu(head_pose: np.ndarray, head_model_offset: np.ndarray) -> np.ndarray` — Convert a head pose (4×4 matrix) and head-model offset (3,) into the corresponding IMU pose (4×4 matrix). The function validates the incoming array shapes, accepts standard NumPy row-major buffers, and returns a copy of the resulting transform.
 
 #### `spatialmp4.RGBFrame`
 - `timestamp: float` — Frame timestamp.
