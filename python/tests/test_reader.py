@@ -48,3 +48,7 @@ def test_reader():
         # Access depth data (returns numpy array)
         depth = depth_frame.depth  # Shape: (height, width)
         print(f"Depth: {depth.shape}")
+
+
+def test_bugfix_extrinsics():
+    print(spatialmp4.Reader('video/test.mp4').get_rgb_extrinsics_left().extrinsics)

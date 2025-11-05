@@ -791,7 +791,7 @@ void Reader::ParseDepthFrame(const AVPacket& pkt, depth_frame& frame_depth, bool
     Eigen::Vector3d t = T_W_Stof.translation();
     Eigen::Quaterniond q = T_W_Stof.unit_quaternion();
     frame_depth.pose.x = t.x();
-    frame_depth.pose.y = t.z();
+    frame_depth.pose.y = t.y();
     frame_depth.pose.z = t.z();
     frame_depth.pose.qx = q.x();
     frame_depth.pose.qy = q.y();
