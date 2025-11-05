@@ -34,6 +34,7 @@ def test_reader():
         
         # Get pose data
         pose = rgb_frame.pose
+        pose_se3 = pose.as_se3()
         print(f"Frame timestamp: {rgb_frame.timestamp}")
         print(f"Pose: x={pose.x}, y={pose.y}, z={pose.z}, qw={pose.qw}, qx={pose.qx}, qy={pose.qy}, qz={pose.qz}")
 

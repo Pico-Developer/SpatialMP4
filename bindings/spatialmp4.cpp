@@ -108,7 +108,9 @@ PYBIND11_MODULE(spatialmp4, m) {
       .def_readwrite("qx", &SpatialML::pose_frame::qx)
       .def_readwrite("qy", &SpatialML::pose_frame::qy)
       .def_readwrite("qz", &SpatialML::pose_frame::qz)
-      .def("as_se3", &SpatialML::pose_frame::as_se3)
+      .def("as_se3", [](const SpatialML::pose_frame &pose) {
+        return pose.as_se3().matrix();
+      })
       .def("__repr__", [](const SpatialML::pose_frame &p) {
         std::ostringstream ss;
         ss << p;
@@ -180,7 +182,9 @@ PYBIND11_MODULE(spatialmp4, m) {
       .def("as_cvmat", [](const SpatialML::camera_extrinsics &extrinsics) {
         return MatxToEigen(extrinsics.as_cvmat());
       })
-      .def("as_se3", &SpatialML::camera_extrinsics::as_se3)
+      .def("as_se3", [](const SpatialML::camera_extrinsics &extrinsics) {
+        return extrinsics.as_se3().matrix();
+      })
       .def("__repr__", [](const SpatialML::camera_extrinsics &e) {
         std::ostringstream ss;
         ss << e;
