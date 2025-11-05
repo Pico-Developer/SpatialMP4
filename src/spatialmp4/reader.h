@@ -102,7 +102,7 @@ class SPATIALMP4_EXPORT Reader {
     }
   }
 
-  Reader(const std::string& filename);
+  Reader(const std::string& filename, const std::string& log_level);
   ~Reader();
 
   bool HasRGB() const { return has_rgb_; }
@@ -157,6 +157,7 @@ class SPATIALMP4_EXPORT Reader {
 
  private:
   std::string filename_;
+  std::string log_level_;
   ReadMode read_mode_;
   AVFormatContext* pFormatCtx_;
   AVPacket current_packet_;

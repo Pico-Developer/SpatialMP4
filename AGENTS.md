@@ -1,16 +1,23 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Core C++ sources live in `src/spatialmp4`, with corresponding headers under `spatialmp4/`. Pybind11 bridge code is under `bindings/`, while the published Python package pieces sit in `python/`. Reference assets are stored in `video/`, reusable build logic in `cmake/`, and helper scripts in `scripts/`. End-user docs and design notes are collected in `docs/`, and runnable walkthroughs reside in `examples/`.
+Core C++ sources live in `src/spatialmp4`, with helpers under `src/spatialmp4/utilities` and Google Test fixtures in `src/spatialmp4/reader_test.cc`.
+Python bindings are assembled in `bindings/spatialmp4.cpp`, while Python packaging and tests sit in `python/`.
+Reference assets (for example `video/test.mp4`) and temporary visualization outputs (`tmp_vis_depth/`) are kept at the repository root.
+Example end-to-end scripts are available under `examples/python` and double as smoke tests for new features.
 
 ## Build, Test, and Development Commands
-Build FFmpeg and third-party dependencies once via `bash scripts/build_ffmpeg.sh` (or `pixi run build-ffmpeg`). Configure and compile the C++ library with `pixi run build`, which wraps the Ninja-based CMake invocation. For a clean rebuild, use `pixi run rebuild`. Run the C++ regression suite with `pixi run test` (expects `video/test.mp4` relative to `build/`), and execute Python coverage with `pixi run test-python`. When debugging locally outside Pixi, replicate the commands shown inside `pixi.toml`.
+Install third-party dependencies and FFmpeg once via `bash scripts/install_deps.sh` and `bash scripts/build_ffmpeg.sh`.
+A standard native build flow is `cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON=OFF` followed by `cmake --build build`.
+When using Pixi, `pixi run build-ffmpeg`, `pixi run build`, and `pixi run rebuild` mirror those steps.
+Package the Python wheel with `pip install .` or `pixi run build` after enabling `-DBUILD_PYTHON=ON`.
+Run cpp unittest: `./build/host/test_reader`. Run python unittest: `pytest -s python/tests`
 
 ## Coding Style & Naming Conventions
-We enforce clang-format 17 using the repository `.clang-format` (Google base style, two-space indentation, 120 character limit). Ensure each new C++ source file includes the license header inserted by the `insert-license` pre-commit hook. Function and type names should be in PascalCase, while variables use lower_snake_case; mirror existing reader/writer APIs. Python modules follow PEP 8, with snake_case functions and CapWords classes. Install the hooks with `pre-commit install` and run `pre-commit run --all-files` before uploading.
+`.clang-format` enforces Google style with 2-space indentation, 120-character lines, and brace-on-same-line formatting. Run `pre-commit run --all-files` (configured for `clang-format` and license insertion) before submitting patches. C++ classes use PascalCase (e.g., `RandomAccessVideoReader`), member functions stay in UpperCamelCase, and local variables use snake_case. Python modules follow PEP 8 naming; prefer snake_case for functions and lower_case_with_underscores for files.
 
 ## Testing Guidelines
-Prefer authoring new C++ tests next to the feature under `src/spatialmp4/tests` or augmenting `test_reader`. Tests should gate on fixtures in `video/` or clearly documented synthetic inputs. Python tests belong in `python/tests/` and must start with `test_`. Document any new assets and keep them under 5 MB where possible. Capture expected outputs or assertions that cover RGB and depth code paths when adding spatial data features.
+Enable the C++ test suite with `cmake -B build -S . -DBUILD_TESTING=ON && cmake --build build`, then execute `VIDEO=../video/test.mp4 ./build/test_reader`. The Pixi shortcut `pixi run test` wraps the same flow. Python tests live in `python/tests` and use pytest; run them with `pixi run test-python` or `pytest python/tests`. New tests should follow the `test_*.py` or `*_test.cc` naming pattern and cover both RGB-only and depth-enabled paths; set the `VIDEO` environment variable when a custom fixture is required.
 
 ## Commit & Pull Request Guidelines
-Commit messages are short, present-tense imperatives (e.g., `add depth frame normalizer`). Group related changes per commit; avoid umbrella “update” descriptions. Pull requests must describe the motivation, list functional changes, and call out breaking API shifts. Reference tracked issues with `Fixes #ID` when applicable, include reproduction or validation commands (copy the `pixi run …` steps), and attach screenshots for visualization updates.
+History favors short, imperative commit subjects (for example, `set loglevel in reader`). Keep message bodies concise, reference related issues, and group mechanical formatting changes separately from functional updates. Pull requests should describe the feature or fix, outline test coverage (`pixi run test`, `pixi run test-python`, manual example scripts), and include screenshots or logs when touching visualization or CLI output. Ensure CI prerequisites (FFmpeg build, dependencies) are documented in the PR notes for new contributors.
