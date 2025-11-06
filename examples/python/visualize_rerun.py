@@ -22,12 +22,15 @@ def pico_pose_to_open3d(extrinsic):
 def main(
     video_file: str,
     depth_only: bool = False,
+    rgb_only: bool = False,
 ):
     """Visualize spatialmp4 using rerun."""
     reader = sm.Reader(video_file)
 
     if depth_only:
         reader.set_read_mode(sm.ReadMode.DEPTH_ONLY)
+    elif rgb_only:
+        reader.set_read_mode(sm.ReadMode.RGB_ONLY)
     else:
         reader.set_read_mode(sm.ReadMode.DEPTH_FIRST)
 
@@ -91,6 +94,16 @@ def main(
             extrinsic = np.eye(4)
             extrinsic[:3, 3] = [TWH.x, TWH.y, TWH.z]
             extrinsic[:3, :3] = Rotation.from_quat((TWH.qx, TWH.qy, TWH.qz, TWH.qw)).as_matrix()
+        elif rgb_only:
+            frame_rgb = reader.load_rgb()
+            timestamp = frame_rgb.timestamp
+
+            __import__('ipdb').set_trace()
+            T_W_Hrgb = frame_rgb.pose.as_se3()
+            T_W_Irgb = sm.head_to_imu(T_W_Hrgb, sm.HEAD_MODEL_OFFSET)
+            T_W_Srgb = T_W_Irgb * T_I_Srgb
+            pass
+
         else:
             rgbd = reader.load_rgbd(True)
             timestamp = rgbd.timestamp

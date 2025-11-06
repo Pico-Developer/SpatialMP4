@@ -85,6 +85,7 @@ PYBIND11_MODULE(spatialmp4, m) {
   m.def("get_major_version", &SpatialML::GetMajorVersion, "Get the major version number");
   m.def("get_minor_version", &SpatialML::GetMinorVersion, "Get the minor version number");
   m.def("get_patch_version", &SpatialML::GetPatchVersion, "Get the patch version number");
+  m.attr("HEAD_MODEL_OFFSET") = Eigen::Vector3d(-0.05057, -0.01874, 0.04309);
 
   // Bind StreamType enum
   py::enum_<SpatialML::StreamType>(m, "StreamType")
@@ -108,9 +109,7 @@ PYBIND11_MODULE(spatialmp4, m) {
       .def_readwrite("qx", &SpatialML::pose_frame::qx)
       .def_readwrite("qy", &SpatialML::pose_frame::qy)
       .def_readwrite("qz", &SpatialML::pose_frame::qz)
-      .def("as_se3", [](const SpatialML::pose_frame &pose) {
-        return pose.as_se3().matrix();
-      })
+      .def("as_se3", [](const SpatialML::pose_frame &pose) { return pose.as_se3().matrix(); })
       .def("__repr__", [](const SpatialML::pose_frame &p) {
         std::ostringstream ss;
         ss << p;
@@ -161,9 +160,8 @@ PYBIND11_MODULE(spatialmp4, m) {
       .def_readwrite("fy", &SpatialML::camera_intrinsics::fy)
       .def_readwrite("cx", &SpatialML::camera_intrinsics::cx)
       .def_readwrite("cy", &SpatialML::camera_intrinsics::cy)
-      .def("as_cvmat", [](const SpatialML::camera_intrinsics &intrinsics) {
-        return MatxToEigen(intrinsics.as_cvmat());
-      })
+      .def("as_cvmat",
+           [](const SpatialML::camera_intrinsics &intrinsics) { return MatxToEigen(intrinsics.as_cvmat()); })
       .def("__repr__", [](const SpatialML::camera_intrinsics &i) {
         std::ostringstream ss;
         ss << i;
@@ -179,12 +177,9 @@ PYBIND11_MODULE(spatialmp4, m) {
           [](SpatialML::camera_extrinsics &extrinsics, const Eigen::Matrix4d &matrix) {
             extrinsics.extrinsics = EigenToMatx(matrix);
           })
-      .def("as_cvmat", [](const SpatialML::camera_extrinsics &extrinsics) {
-        return MatxToEigen(extrinsics.as_cvmat());
-      })
-      .def("as_se3", [](const SpatialML::camera_extrinsics &extrinsics) {
-        return extrinsics.as_se3().matrix();
-      })
+      .def("as_cvmat",
+           [](const SpatialML::camera_extrinsics &extrinsics) { return MatxToEigen(extrinsics.as_cvmat()); })
+      .def("as_se3", [](const SpatialML::camera_extrinsics &extrinsics) { return extrinsics.as_se3().matrix(); })
       .def("__repr__", [](const SpatialML::camera_extrinsics &e) {
         std::ostringstream ss;
         ss << e;
