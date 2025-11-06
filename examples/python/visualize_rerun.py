@@ -2,6 +2,7 @@ import typer
 import os
 import cv2
 import numpy as np
+from typing import Optional
 from scipy.spatial.transform import Rotation
 import spatialmp4 as sm
 import rerun as rr
@@ -9,6 +10,7 @@ import rerun.blueprint as rrb
 
 
 def pico_pose_to_open3d(extrinsic):
+    extrinsic = np.array(extrinsic, dtype=np.float64, copy=True)
     convert = np.array([
         [0, 0, 1, 0],
         [1, 0, 0, 0],
@@ -19,12 +21,51 @@ def pico_pose_to_open3d(extrinsic):
     return output
 
 
+def ensure_right_handed_rotation(rotation_matrix: np.ndarray) -> np.ndarray:
+    r = np.array(rotation_matrix, dtype=np.float64, copy=True)
+    u, _, vh = np.linalg.svd(r)
+    corrected = u @ vh
+    if np.linalg.det(corrected) < 0:
+        u[:, -1] *= -1
+        corrected = u @ vh
+    return corrected
+
+
+def head_to_imu(head_pose: np.ndarray, head_model_offset: np.ndarray) -> np.ndarray:
+    """Convert head pose (T_W_H) into IMU pose (T_W_I) matching Utilities::HeadToImu."""
+    head_pose = np.asarray(head_pose, dtype=np.float64)
+    if head_pose.shape != (4, 4):
+        raise ValueError("head_pose must be a 4x4 matrix")
+
+    head_model_offset = np.asarray(head_model_offset, dtype=np.float64)
+    if head_model_offset.shape != (3,):
+        raise ValueError("head_model_offset must be a 3-element vector")
+
+    rotation_matrix = head_pose[:3, :3]
+    translation = head_pose[:3, 3].copy()
+
+    rotation = Rotation.from_matrix(rotation_matrix)
+    translation -= rotation.apply(head_model_offset)
+
+    quat_x, quat_y, quat_z, quat_w = rotation.as_quat()  # scipy returns xyzw
+    imu_quat = np.array([quat_y, -quat_x, quat_z, quat_w], dtype=np.float64)  # xyzw
+    imu_rotation = Rotation.from_quat(imu_quat).as_matrix()
+    imu_translation = np.array([translation[1], -translation[0], translation[2]], dtype=np.float64)
+
+    imu_pose = np.eye(4, dtype=np.float64)
+    imu_pose[:3, :3] = imu_rotation
+    imu_pose[:3, 3] = imu_translation
+    return imu_pose
+
+
 def main(
     video_file: str,
     depth_only: bool = False,
     rgb_only: bool = False,
+    topk: Optional[int] = typer.Option(None, help="Limit visualization to the first K frames."),
 ):
     """Visualize spatialmp4 using rerun."""
+
     reader = sm.Reader(video_file)
 
     if depth_only:
@@ -34,14 +75,14 @@ def main(
     else:
         reader.set_read_mode(sm.ReadMode.DEPTH_FIRST)
 
-    if not reader.has_depth():
+    if not rgb_only and not reader.has_depth():
         typer.echo(typer.style(f"No depth found in input file", fg=typer.colors.RED))
         return
     if not reader.has_pose():
-        typer.echo(typer.style(f"No depth found in input file", fg=typer.colors.RED))
+        typer.echo(typer.style(f"No pose found in input file", fg=typer.colors.RED))
         return
 
-    blueprint=rrb.Horizontal(
+    blueprint = rrb.Horizontal(
         rrb.Vertical(
             rrb.Spatial3DView(name="3D", origin="world"),
             rrb.TextDocumentView(name="Description", origin="/description"),
@@ -83,6 +124,8 @@ def main(
         cx = float(reader.get_rgb_intrinsics_left().cx)
         cy = float(reader.get_rgb_intrinsics_left().cy)
 
+    processed = 0
+
     while reader.has_next():
         if depth_only:
             depth_frame = reader.load_depth()
@@ -98,28 +141,31 @@ def main(
             frame_rgb = reader.load_rgb()
             timestamp = frame_rgb.timestamp
 
-            __import__('ipdb').set_trace()
+            T_I_Srgb = reader.get_rgb_extrinsics_left().as_se3()
             T_W_Hrgb = frame_rgb.pose.as_se3()
             T_W_Irgb = sm.head_to_imu(T_W_Hrgb, sm.HEAD_MODEL_OFFSET)
-            T_W_Srgb = T_W_Irgb * T_I_Srgb
-            pass
+            T_W_Srgb = T_W_Irgb @ T_I_Srgb
+            extrinsic = T_W_Srgb
 
         else:
             rgbd = reader.load_rgbd(True)
             timestamp = rgbd.timestamp
             depth_np = rgbd.depth
             extrinsic = rgbd.T_W_S
-        print(f"Loading frame {reader.get_index() + 1} / {reader.get_frame_count()}, timestamp: {timestamp}")
 
-        # preprocess on depthmap
-        depth_uint16 = (depth_np * 1000).astype(np.uint16)
-        sobelx = cv2.Sobel(depth_uint16, cv2.CV_32F, 1, 0, ksize=3)
-        sobely = cv2.Sobel(depth_uint16, cv2.CV_32F, 0, 1, ksize=3)
-        grad_mag = np.sqrt(sobelx**2 + sobely**2)
-        depth_np[grad_mag > 500] = 0
-        depth_np[(depth_np < 0.2) | (depth_np > 5)] = 0
+        print(f"Loading frame {reader.get_index() + 1} / {reader.get_frame_count()}, timestamp: {timestamp}")
+        
+        if not rgb_only:
+            # preprocess on depthmap
+            depth_uint16 = (depth_np * 1000).astype(np.uint16)
+            sobelx = cv2.Sobel(depth_uint16, cv2.CV_32F, 1, 0, ksize=3)
+            sobely = cv2.Sobel(depth_uint16, cv2.CV_32F, 0, 1, ksize=3)
+            grad_mag = np.sqrt(sobelx**2 + sobely**2)
+            depth_np[grad_mag > 500] = 0
+            depth_np[(depth_np < 0.2) | (depth_np > 5)] = 0
 
         extrinsic = pico_pose_to_open3d(extrinsic)
+        extrinsic[:3, :3] = ensure_right_handed_rotation(extrinsic[:3, :3])
 
         rr.set_time_seconds("time", timestamp)
         rr.log("world/xyz", rr.Arrows3D(vectors=[[1, 0, 0], [0, 1, 0], [0, 0, 1]], colors=[[255, 0, 0], [0, 255, 0], [0, 0, 255]]))
@@ -132,9 +178,19 @@ def main(
         position = extrinsic[:3, 3]
         rotation = Rotation.from_matrix(extrinsic[:3, :3]).as_quat()
         rr.log("world/camera", rr.Transform3D(translation=position, rotation=rr.Quaternion(xyzw=rotation)))
-        rr.log("world/camera/image/depth", rr.DepthImage(depth_np, meter=1.0))
-        if not depth_only:
-            rr.log("world/camera/image/rgb", rr.Image(rgbd.rgb, color_model="BGR").compress(jpeg_quality=95))
+
+        if rgb_only:
+            rr.log("world/camera/image/rgb", rr.Image(frame_rgb.left_rgb, color_model="BGR").compress(jpeg_quality=95))
+        else:
+            rr.log("world/camera/image/depth", rr.DepthImage(depth_np, meter=1.0))
+            if not depth_only:
+                rr.log("world/camera/image/rgb", rr.Image(rgbd.rgb, color_model="BGR").compress(jpeg_quality=95))
+
+        processed += 1
+        if topk is not None and processed >= topk:
+            break
+        if topk and reader.get_index() > topk:
+            break
 
 
 if __name__ == "__main__":#

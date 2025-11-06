@@ -85,3 +85,20 @@ def test_head_to_imu_general_pose():
     imu_pose = spatialmp4.head_to_imu(head_pose, offset)
     expected = compute_expected_head_to_imu(head_pose, offset)
     assert np.allclose(imu_pose, expected, atol=1e-10)
+
+
+def test_head_to_imu_fortran_order_input():
+    angle = np.deg2rad(30.0)
+    Rx = np.array([
+        [1.0, 0.0, 0.0],
+        [0.0, np.cos(angle), -np.sin(angle)],
+        [0.0, np.sin(angle), np.cos(angle)],
+    ])
+    head_pose = np.eye(4, order="F")
+    head_pose[:3, :3] = Rx
+    head_pose[:3, 3] = np.array([0.3, -0.4, 0.5])
+    offset = np.array([0.12, -0.08, 0.04])
+
+    expected = compute_expected_head_to_imu(np.array(head_pose), offset)
+    imu_pose = spatialmp4.head_to_imu(head_pose, offset)
+    assert np.allclose(imu_pose, expected, atol=1e-12)

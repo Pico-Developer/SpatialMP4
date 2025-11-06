@@ -307,7 +307,8 @@ PYBIND11_MODULE(spatialmp4, m) {
 
   m.def(
       "head_to_imu",
-      [](py::array_t<double> head_pose_array, py::array_t<double> head_model_offset_array) {
+      [](py::array_t<double, py::array::forcecast> head_pose_array,
+         py::array_t<double, py::array::forcecast> head_model_offset_array) {
         py::buffer_info pose_info = head_pose_array.request();
         if (pose_info.ndim != 2 || pose_info.shape[0] != 4 || pose_info.shape[1] != 4) {
           throw std::invalid_argument("head_pose must be a 4x4 matrix");
@@ -317,12 +318,36 @@ PYBIND11_MODULE(spatialmp4, m) {
           throw std::invalid_argument("head_model_offset must be a 3-element vector");
         }
 
-        Eigen::Map<const Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> head_pose_map(
-            static_cast<double *>(pose_info.ptr));
-        Eigen::Map<const Eigen::Vector3d> head_model_offset_map(static_cast<double *>(offset_info.ptr));
+        Eigen::Matrix4d head_pose_matrix;
+        const auto row_stride = pose_info.strides[0] / static_cast<py::ssize_t>(sizeof(double));
+        const auto col_stride = pose_info.strides[1] / static_cast<py::ssize_t>(sizeof(double));
+        const double *pose_ptr = static_cast<const double *>(pose_info.ptr);
+        if (pose_info.strides[1] == static_cast<py::ssize_t>(sizeof(double))) {
+          Eigen::Map<const Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> head_pose_map(pose_ptr);
+          head_pose_matrix = head_pose_map;
+        } else if (pose_info.strides[0] == static_cast<py::ssize_t>(sizeof(double))) {
+          Eigen::Map<const Eigen::Matrix<double, 4, 4, Eigen::ColMajor>> head_pose_map(pose_ptr);
+          head_pose_matrix = head_pose_map;
+        } else {
+          head_pose_matrix.setZero();
+          for (py::ssize_t i = 0; i < 4; ++i) {
+            for (py::ssize_t j = 0; j < 4; ++j) {
+              head_pose_matrix(i, j) = pose_ptr[i * row_stride + j * col_stride];
+            }
+          }
+        }
 
-        Eigen::Matrix4d head_pose_matrix = head_pose_map;
-        Eigen::Vector3d head_model_offset = head_model_offset_map;
+        Eigen::Vector3d head_model_offset;
+        const double *offset_ptr = static_cast<const double *>(offset_info.ptr);
+        if (offset_info.strides[0] == static_cast<py::ssize_t>(sizeof(double))) {
+          Eigen::Map<const Eigen::Vector3d> head_model_offset_map(offset_ptr);
+          head_model_offset = head_model_offset_map;
+        } else {
+          const auto offset_stride = offset_info.strides[0] / static_cast<py::ssize_t>(sizeof(double));
+          for (py::ssize_t i = 0; i < 3; ++i) {
+            head_model_offset[i] = offset_ptr[i * offset_stride];
+          }
+        }
 
         Eigen::Matrix3d R = head_pose_matrix.block<3, 3>(0, 0);
         Eigen::Vector3d t = head_pose_matrix.block<3, 1>(0, 3);
@@ -333,9 +358,14 @@ PYBIND11_MODULE(spatialmp4, m) {
         Sophus::SE3d imu_pose;
         Utilities::HeadToImu(head_pose, head_model_offset, imu_pose);
 
-        Eigen::Matrix<double, 4, 4, Eigen::RowMajor> result = imu_pose.matrix();
+        const Eigen::Matrix4d result = imu_pose.matrix();
         py::array_t<double> output({4, 4});
-        std::memcpy(output.mutable_data(), result.data(), sizeof(double) * 16);
+        auto mutable_result = output.mutable_unchecked<2>();
+        for (py::ssize_t i = 0; i < 4; ++i) {
+          for (py::ssize_t j = 0; j < 4; ++j) {
+            mutable_result(i, j) = result(i, j);
+          }
+        }
         return output;
       },
       py::arg("head_pose"), py::arg("head_model_offset"));
