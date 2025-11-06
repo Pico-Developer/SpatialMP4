@@ -34,6 +34,7 @@ def test_reader():
         
         # Get pose data
         pose = rgb_frame.pose
+        pose_se3 = pose.as_se3()
         print(f"Frame timestamp: {rgb_frame.timestamp}")
         print(f"Pose: x={pose.x}, y={pose.y}, z={pose.z}, qw={pose.qw}, qx={pose.qx}, qy={pose.qy}, qz={pose.qz}")
 
@@ -48,3 +49,7 @@ def test_reader():
         # Access depth data (returns numpy array)
         depth = depth_frame.depth  # Shape: (height, width)
         print(f"Depth: {depth.shape}")
+
+
+def test_bugfix_extrinsics():
+    print(spatialmp4.Reader('video/test.mp4').get_rgb_extrinsics_left().extrinsics)
