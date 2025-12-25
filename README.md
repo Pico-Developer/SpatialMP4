@@ -321,6 +321,24 @@ struct pose_frame {
 };
 ```
 
+pose definition:
+`pose_frame` is defined in the world coordinate system. The axis convention is:
+- X: left
+- Y: up
+- Z: into the page
+
+right-handed:
+```
+          Y+
+          |   / Z+ (into page)
+          | /
+X+ <------O
+
+```
+
+Example visualization output ![](docs/vis_pose_result.mp4)
+
+
 ## 📖 Usage Guide (python)
 
 
