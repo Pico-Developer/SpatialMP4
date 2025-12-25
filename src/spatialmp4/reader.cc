@@ -744,10 +744,10 @@ void Reader::LoadAllPoseData(int frame_id) {
       pose_frame.x = pose_data[0];
       pose_frame.y = pose_data[1];
       pose_frame.z = pose_data[2];
-      pose_frame.qw = pose_data[3];
-      pose_frame.qx = pose_data[4];
-      pose_frame.qy = pose_data[5];
-      pose_frame.qz = pose_data[6];
+      pose_frame.qx = pose_data[3];
+      pose_frame.qy = pose_data[4];
+      pose_frame.qz = pose_data[5];
+      pose_frame.qw = pose_data[6];
       pose_frames_.addPose(pose_frame.timestamp, pose_frame);
     }
     av_packet_unref(&pkt);
