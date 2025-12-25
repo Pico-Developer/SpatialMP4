@@ -164,7 +164,7 @@ def main(
         None,
         help="Output video path (default: <output_dir>.mp4 when set)",
     ),
-    sample: int = typer.Option(10, help="Sample every N frames"),
+    sample: int = typer.Option(5, help="Sample every N frames"),
 ):
     if sample < 1:
         typer.echo(typer.style("sample must be >= 1", fg=typer.colors.RED))
@@ -190,7 +190,8 @@ def main(
     reader.reset()
 
     if output_dir is None:
-        output_dir = f"{video_file}_pose_frames"
+        base_name = os.path.splitext(os.path.basename(video_file))[0]
+        output_dir = f"tmp_vis_{base_name}"
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -208,6 +209,9 @@ def main(
     ax_pose.plot([0, -axis_len], [0, 0], [0, 0], color="r", linewidth=2)
     ax_pose.plot([0, 0], [0, axis_len], [0, 0], color="g", linewidth=2)
     ax_pose.plot([0, 0], [0, 0], [0, -axis_len], color="b", linewidth=2)
+    ax_pose.text(-axis_len, 0, 0, "X", color="r")
+    ax_pose.text(0, axis_len, 0, "Y", color="g")
+    ax_pose.text(0, 0, -axis_len, "Z", color="b")
 
     margin = max(cube_size * 2.0, 0.5)
     min_xyz = np.minimum(min_xyz, np.zeros(3))
@@ -216,6 +220,7 @@ def main(
     ax_pose.set_ylim(min_xyz[1] - margin, max_xyz[1] + margin)
     ax_pose.set_zlim(min_xyz[2] - margin, max_xyz[2] + margin)
     ax_pose.dist = 2
+    ax_pose.view_init(elev=30, azim=-60, roll=0)
 
     cube_vertices, cube_edges = make_cube(cube_size * 2.0)
     cube_lines = [
