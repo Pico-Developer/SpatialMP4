@@ -336,7 +336,12 @@ X+ <------O
 
 ```
 
-Example visualization output ![](docs/vis_pose_result.mp4)
+Example visualization output:
+
+<video controls width="640">
+  <source src="docs/vis_pose_result.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 
 ## 📖 Usage Guide (python)
