@@ -336,7 +336,7 @@ X+ <------O
 
 ```
 
-Example visualization output:
+Example visualization output: `docs/vis_pose_result.mp4`
 
 <video controls width="640">
   <source src="docs/vis_pose_result.mp4" type="video/mp4">
