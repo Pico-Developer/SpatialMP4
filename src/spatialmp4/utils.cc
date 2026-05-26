@@ -76,7 +76,7 @@ void PrintStreamInfo(AVFormatContext* pFormatCtx) {
 std::unordered_map<int, StreamType> GetStreamTypeInfo(AVFormatContext* pFormatCtx) {
   std::unordered_map<int, StreamType> stream_type_info;
   for (int i = 0; i < pFormatCtx->nb_streams; i++) {
-    const char* codec_name = avcodec_get_name(pFormatCtx->streams[i]->codecpar->codec_id);
+    std::string codec_name = avcodec_get_name(pFormatCtx->streams[i]->codecpar->codec_id);
 
     if (codec_name == "aac") {
       stream_type_info[i] = MEDIA_TYPE_AUDIO;
