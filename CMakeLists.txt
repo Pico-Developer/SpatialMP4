@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24.1 FATAL_ERROR)
 
-project(spatialmp4 VERSION 0.1.0)
+project(mp4writer VERSION 0.1.0)
 
 # Configure version header
 configure_file(
@@ -28,21 +28,22 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fPIC -DEIGEN_MPL2_O
 set(WITH_OPENGL OFF CACHE BOOL "disable opengl" FORCE)
 
 include(cmake/ffmpeg_local.cmake)
-include(cmake/opencv_host.cmake)
-include(cmake/spdlog.cmake)
-include(cmake/fmt.cmake)
-include(cmake/eigen.cmake)
-include(cmake/sophus.cmake)
+# include(cmake/opencv_host.cmake)
+# include(cmake/spdlog.cmake)
+# include(cmake/fmt.cmake)
+# include(cmake/eigen.cmake)
+# include(cmake/sophus.cmake)
 
 if(BUILD_PYTHON)
     include(cmake/pybind11.cmake)
 endif()
  
 set(SRC 
-    ./src/spatialmp4/utilities/RgbdUtils.cc
-    ./src/spatialmp4/utilities/OpencvUtils.cc
-    ./src/spatialmp4/utils.cc
-    ./src/spatialmp4/reader.cc
+    # ./src/spatialmp4/utilities/RgbdUtils.cc
+    # ./src/spatialmp4/utilities/OpencvUtils.cc
+    # ./src/spatialmp4/utils.cc
+    # ./src/spatialmp4/reader.cc
+    ./src/mp4writer/write.cc
 )
 
 add_library(${CMAKE_PROJECT_NAME}_lib STATIC ${SRC})
@@ -59,11 +60,11 @@ endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME}_lib PUBLIC
     PkgConfig::LIBAV
-    PkgConfig::OpenCV
-    spdlog
-    fmt::fmt
-    Eigen3::Eigen
-    sophus
+    # PkgConfig::OpenCV
+    # spdlog
+    # fmt::fmt
+    # Eigen3::Eigen
+    # sophus
 )
 # On newer versions of macOS (>=10.15) and with newer compilers,
 # filesystem is part of the standard library and doesn't need explicit linking
@@ -74,6 +75,7 @@ endif()
 
 # Add macOS framework linking
 if(APPLE)
+    message(STATUS "build mac os framework linking.")
     set_target_properties(${CMAKE_PROJECT_NAME}_lib PROPERTIES
         INSTALL_RPATH "@loader_path"
         BUILD_WITH_INSTALL_RPATH TRUE
@@ -98,40 +100,53 @@ if(APPLE)
     find_library(COREIMAGE_FRAMEWORK CoreImage)
     find_library(CORESERVICES_FRAMEWORK CoreServices)
     find_library(SECURITY_FRAMEWORK Security)
-    
-    target_link_libraries(${CMAKE_PROJECT_NAME}_lib PUBLIC
-        ${FOUNDATION_FRAMEWORK}
-        ${AUDIOTOOLBOX_FRAMEWORK}
-        ${COREAUDIO_FRAMEWORK}
-        ${AVFOUNDATION_FRAMEWORK}
-        ${COREVIDEO_FRAMEWORK}
-        ${COREMEDIA_FRAMEWORK}
-        ${COREGRAPHICS_FRAMEWORK}
-        ${OPENGL_FRAMEWORK}
-        ${APPLICATIONSERVICES_FRAMEWORK}
-        ${COREFOUNDATION_FRAMEWORK}
-        ${APPKIT_FRAMEWORK}
-        ${CARBON_FRAMEWORK}
-        ${METAL_FRAMEWORK}
-        ${VIDEOTOOLBOX_FRAMEWORK}
-        ${COREIMAGE_FRAMEWORK}
-        ${CORESERVICES_FRAMEWORK}
-        ${SECURITY_FRAMEWORK}
-    )
+   
+    if(NOT COREAUDIO_FRAMEWORK)
+        message(FATAL_ERROR "Foundation framework not found")
+    endif()
+ 
+    # target_link_libraries(${CMAKE_PROJECT_NAME}_lib PUBLIC
+    #     "-framework Foundation"
+    #     "-framework AudioToolbox"
+    #     "-framework CoreAudio"
+    #     "-framework AVFoundation"
+    #     "-framework CoreVideo"
+    #     "-framework CoreMedia"
+    #     "-framework CoreGraphics"
+    #     "-framework OpenGL"
+    #     "-framework ApplicationServices"
+    #     "-framework CoreFoundation"
+    #     "-framework AppKit"
+    #     "-framework Carbon"
+    #     "-framework Metal"
+    #     "-framework VideoToolbox"
+    #     "-framework CoreImage"
+    #     "-framework CoreServices"
+    #     "-framework Security"
+    # )
 endif()
 
 if(BUILD_TESTING)
-    include(cmake/gtest.cmake)
-    add_executable(test_reader
-        ${SRC}
-        ./src/spatialmp4/utilities/RgbdUtils.cc
-        ./src/spatialmp4/utilities/PointcloudUtils.cc
-        ./src/spatialmp4/reader_test.cc
+    # include(cmake/gtest.cmake)
+    # add_executable(test_reader
+    #     ${SRC}
+    #     ./src/spatialmp4/utilities/RgbdUtils.cc
+    #     ./src/spatialmp4/utilities/PointcloudUtils.cc
+    #     ./src/spatialmp4/reader_test.cc
+    # )
+    
+    # target_link_libraries(test_reader PUBLIC
+    #     gtest
+    #     gtest_main
+    #     ${CMAKE_PROJECT_NAME}_lib
+    # )
+
+    add_executable(test_writer
+        ./src/mp4writer/main.cc
     )
-    target_link_libraries(test_reader PRIVATE
+    
+    target_link_libraries(test_writer PUBLIC
         ${CMAKE_PROJECT_NAME}_lib
-        gtest
-        gtest_main
     )
     
     # On newer versions of macOS (>=10.15) and with newer compilers,
