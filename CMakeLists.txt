@@ -18,6 +18,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 option(BUILD_ANDROID "whether build for android" OFF)
 option(BUILD_TESTING "whether build unit test" ON)
 option(BUILD_PYTHON "whether build python bindings" ON)
+option(BUILD_READER_SMOKE "whether build SpatialMP4 reader smoke executable" OFF)
 
 if(BUILD_ANDROID)
     message(FATAL_ERROR "Don't support android building.")
@@ -37,6 +38,14 @@ include(cmake/ffmpeg_local.cmake)
 if(BUILD_PYTHON)
     include(cmake/pybind11.cmake)
 endif()
+
+if(BUILD_READER_SMOKE)
+    find_package(OpenCV REQUIRED COMPONENTS core imgproc)
+    include(cmake/spdlog.cmake)
+    include(cmake/fmt.cmake)
+    include(cmake/eigen.cmake)
+    include(cmake/sophus.cmake)
+endif()
  
 set(SRC 
     # ./src/spatialmp4/utilities/RgbdUtils.cc
@@ -44,6 +53,7 @@ set(SRC
     # ./src/spatialmp4/utils.cc
     # ./src/spatialmp4/reader.cc
     ./src/mp4writer/write.cc
+    ./src/mp4writer/packet_muxer.cc
 )
 
 add_library(${CMAKE_PROJECT_NAME}_lib STATIC ${SRC})
@@ -66,6 +76,31 @@ target_link_libraries(${CMAKE_PROJECT_NAME}_lib PUBLIC
     # Eigen3::Eigen
     # sophus
 )
+
+if(BUILD_READER_SMOKE)
+    add_library(spatialmp4_reader_lib STATIC
+        ./src/spatialmp4/reader.cc
+        ./src/spatialmp4/utils.cc
+        ./src/spatialmp4/utilities/RgbdUtils.cc
+    )
+    target_include_directories(spatialmp4_reader_lib PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_BINARY_DIR}/include
+        ${OpenCV_INCLUDE_DIRS}
+    )
+    target_link_libraries(spatialmp4_reader_lib PUBLIC
+        PkgConfig::LIBAV
+        ${OpenCV_LIBS}
+        spdlog
+        fmt::fmt
+        Eigen3::Eigen
+        sophus
+    )
+    add_executable(spatialmp4_reader_smoke
+        ./src/spatialmp4/reader_smoke_main.cc
+    )
+    target_link_libraries(spatialmp4_reader_smoke PRIVATE spatialmp4_reader_lib)
+endif()
 # On newer versions of macOS (>=10.15) and with newer compilers,
 # filesystem is part of the standard library and doesn't need explicit linking
 if(UNIX AND NOT APPLE)
@@ -146,6 +181,14 @@ if(BUILD_TESTING)
     )
     
     target_link_libraries(test_writer PUBLIC
+        ${CMAKE_PROJECT_NAME}_lib
+    )
+
+    add_executable(spatialmp4_packet_muxer
+        ./src/mp4writer/packet_muxer_main.cc
+    )
+
+    target_link_libraries(spatialmp4_packet_muxer PUBLIC
         ${CMAKE_PROJECT_NAME}_lib
     )
     

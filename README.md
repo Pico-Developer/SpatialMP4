@@ -53,6 +53,9 @@ Build `ffmpeg` first:
 bash scripts/build_ffmpeg.sh
 ```
 
+The build script defaults to FFmpeg `8.1.1` (`n8.1.1`) with the SpatialMP4
+reader/writer patches applied.
+
 ### 3. Install Dependencies
 
 ```bash
@@ -105,6 +108,9 @@ Build `ffmpeg` first:
 ```bash
 bash scripts/build_ffmpeg.sh
 ```
+
+The build script defaults to FFmpeg `8.1.1` (`n8.1.1`) with the SpatialMP4
+reader/writer patches applied.
 
 ### 3. Install Dependencies
 

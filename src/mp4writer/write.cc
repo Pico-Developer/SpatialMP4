@@ -3,6 +3,12 @@
 
 using namespace std;
 
+namespace {
+constexpr AVPacketSideDataType kPktDataEcam = AV_PKT_DATA_ECAM;
+constexpr AVPacketSideDataType kPktDataIcam = AV_PKT_DATA_ICAM;
+constexpr AVPacketSideDataType kPktDataDistortion = AV_PKT_DATA_DISTORTION_COEFFICIENTS;
+}
+
 string output_file = "output.mp4";
 uint8_t tmp_data1[10] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
 uint8_t tmp_data2[10] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
@@ -114,15 +120,15 @@ void MP4Writer::addTrack(char* mime_type){
         
         AVPacketSideData *side_data_ecam = 
         av_packet_side_data_new(&stream1->codecpar->coded_side_data, &stream1->codecpar->nb_coded_side_data,
-        AV_PKT_DATA_ECAM, sizeof(ecam), 0);
+        kPktDataEcam, sizeof(ecam), 0);
         memcpy(side_data_ecam->data, ecam, sizeof(ecam));
         AVPacketSideData *side_data_icam = 
         av_packet_side_data_new(&stream1->codecpar->coded_side_data, &stream1->codecpar->nb_coded_side_data,
-        AV_PKT_DATA_ICAM, sizeof(icam), 0);
+        kPktDataIcam, sizeof(icam), 0);
         memcpy(side_data_icam->data, icam, sizeof(icam));
         AVPacketSideData *side_data_distortion = 
         av_packet_side_data_new(&stream1->codecpar->coded_side_data, &stream1->codecpar->nb_coded_side_data,
-        AV_PKT_DATA_DISTORTION_COEFFICIENTS, sizeof(distortion), 0);
+        kPktDataDistortion, sizeof(distortion), 0);
         memcpy(side_data_distortion->data, distortion, sizeof(distortion));
         
 
@@ -170,6 +176,4 @@ MP4Writer::~MP4Writer() {
 }
 
    using namespace std;
-
-
 

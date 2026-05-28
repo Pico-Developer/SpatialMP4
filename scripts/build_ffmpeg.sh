@@ -6,6 +6,12 @@ _curfile=$(realpath $0)
 cur=$(dirname $_curfile)
 opt=$cur/build_ffmpeg
 INSTALL_PREFIX=$opt/ffmpeg_install
+SKIP_OPENCV=${SKIP_OPENCV:-0}
+FFMPEG_MINIMAL=${FFMPEG_MINIMAL:-0}
+FFMPEG_VERSION=${FFMPEG_VERSION:-8.1.1}
+FFMPEG_TAG=${FFMPEG_TAG:-n${FFMPEG_VERSION}}
+FFMPEG_READ_PATCH=${FFMPEG_READ_PATCH:-$cur/ffmpeg_8_1_1_read.patch}
+FFMPEG_ENC_PATCH=${FFMPEG_ENC_PATCH:-$cur/ffmpeg_8_1_1_enc.patch}
 
 CMAKE_EXTRA_CONFIG=""
 if [ -n "$CONDA_PREFIX" ];then
@@ -13,6 +19,7 @@ if [ -n "$CONDA_PREFIX" ];then
     CMAKE_EXTRA_CONFIG="-DCMAKE_INCLUDE_PATH=${CONDA_PREFIX}/include"
 fi
 echo "INSTALL_PREFIX: $INSTALL_PREFIX"
+echo "FFMPEG_VERSION: $FFMPEG_VERSION ($FFMPEG_TAG)"
 
 if [ ! -d $opt ];then
     mkdir -p $opt
@@ -53,6 +60,7 @@ install_deps() {
             libva-dev \
             libvdpau-dev \
             libvorbis-dev \
+            libx265-dev \
             libxcb1-dev \
             libxcb-shm0-dev \
             libxcb-xfixes0-dev \
@@ -73,8 +81,11 @@ build_install_ffmpeg() {
         git clone https://git.ffmpeg.org/ffmpeg.git
     fi
     cd ffmpeg
-    git reset --hard b6f84cd7
-    git apply $cur/ffmpeg_b6f84cd7.patch
+    git fetch --tags origin "$FFMPEG_TAG"
+    git reset --hard "$FFMPEG_TAG"
+    git clean -fdx
+    git apply "$FFMPEG_READ_PATCH"
+    git apply "$FFMPEG_ENC_PATCH"
     
     # Clean previous build
     make distclean || true
@@ -93,17 +104,25 @@ build_install_ffmpeg() {
     export CFLAGS="-fPIC"
     export CXXFLAGS="-fPIC"
     export ASFLAGS="-DPIC"
+    OPTIONAL_FEATURE_ARGS=()
+    if [ "$FFMPEG_MINIMAL" != "1" ]; then
+        OPTIONAL_FEATURE_ARGS+=(
+            --enable-libass
+            --enable-libfreetype
+            --enable-libvorbis
+        )
+    fi
     ./configure \
         --prefix=$INSTALL_PREFIX \
         --extra-cflags="-I/usr/local/include -fPIC" \
         --extra-cxxflags="-fPIC" \
         --extra-ldflags="-L/usr/local/lib -fPIC" \
-        --enable-libass \
-        --enable-libfreetype \
-        --enable-libvorbis \
+        --enable-gpl \
+        --enable-libx265 \
         --enable-version3 \
         --disable-ffplay \
         --disable-doc \
+        "${OPTIONAL_FEATURE_ARGS[@]}" \
         ${EXTRA_CONFIG}
         # --enable-libmp3lame \
     
@@ -187,8 +206,10 @@ build_install_opencv() {
     make install
 }
 
-if [ -z "$CONDA_PREFIX" ];then
+if [ -z "$CONDA_PREFIX" ] && [ "${SKIP_DEPS:-0}" != "1" ];then
     install_deps
 fi
 build_install_ffmpeg
-build_install_opencv
+if [ "$SKIP_OPENCV" != "1" ]; then
+    build_install_opencv
+fi
