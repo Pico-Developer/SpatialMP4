@@ -15,6 +15,7 @@
  */
 
 #pragma once
+#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -60,6 +61,42 @@ struct pose_frame {
     Eigen::Matrix3d R = q.toRotationMatrix();
     return Sophus::SE3d(R, Eigen::Vector3d(x, y, z));
   }
+};
+
+struct hand_joint {
+  uint16_t joint_id = 0;
+  uint16_t flags = 0;
+  float radius_m = 0.0f;
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
+  float qx = 0.0f;
+  float qy = 0.0f;
+  float qz = 0.0f;
+  float qw = 1.0f;
+};
+
+struct hand_joints_frame {
+  double timestamp = 0.0;
+  std::string track_id;
+  std::vector<hand_joint> joints;
+};
+
+struct controller_input_frame {
+  double timestamp = 0.0;
+  std::string track_id;
+  uint16_t packet_type = 0;  // 1=snapshot, 2=event
+  uint16_t controller = 0;   // 0=left, 1=right
+  uint64_t available_mask = 0;
+  uint64_t pressed_mask = 0;
+  uint64_t touched_mask = 0;
+  uint64_t changed_mask = 0;
+  float trigger_value = 0.0f;
+  float grip_value = 0.0f;
+  float thumbstick_x = 0.0f;
+  float thumbstick_y = 0.0f;
+  float trackpad_x = 0.0f;
+  float trackpad_y = 0.0f;
 };
 
 struct rgb_frame {

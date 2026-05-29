@@ -86,6 +86,11 @@ std::unordered_map<int, StreamType> GetStreamTypeInfo(AVFormatContext* pFormatCt
       stream_type_info[i] = MEDIA_TYPE_RGB;
     } else if (codec_name == "disparity") {
       stream_type_info[i] = MEDIA_TYPE_DISPARITY;
+    } else if (codec_name == "ffv1") {
+      // FFV1-compressed depth track (newer captures). Older captures store
+      // depth uncompressed under codec_id==NONE/raw1 and are handled by the
+      // "none" branch below, so both layouts classify as MEDIA_TYPE_DEPTH.
+      stream_type_info[i] = MEDIA_TYPE_DEPTH;
     } else if (codec_name == "none") {
       std::vector<std::string> meta_key_list;
       AVDictionaryEntry* tag = NULL;

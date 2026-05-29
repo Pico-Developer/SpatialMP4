@@ -14,23 +14,30 @@ set(CMAKE_SHARED_MODULE_PREFIX "")
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
 # Add Python bindings library
-pybind11_add_module(spatialmp4 spatialmp4.cpp)
+pybind11_add_module(spatialmp4
+    spatialmp4.cpp
+    ../src/spatialmp4/reader.cc
+    ../src/spatialmp4/utils.cc
+    ../src/spatialmp4/utilities/RgbdUtils.cc
+)
 
 # Link against main library and dependencies
 target_link_libraries(spatialmp4 PRIVATE 
-    spatialmp4_lib
+    ${CMAKE_PROJECT_NAME}_lib
+    PkgConfig::LIBAV
     ${OpenCV_LIBS}
+    spdlog
+    fmt::fmt
     Sophus::Sophus
     Eigen3::Eigen
-    ${FFMPEG_LIBRARIES}
 )
 
 # Include directories
 target_include_directories(spatialmp4 PRIVATE
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_BINARY_DIR}/include
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    ${FFMPEG_INCLUDE_DIRS}
 )
 
 if (APPLE)

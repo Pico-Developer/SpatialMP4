@@ -39,7 +39,7 @@ if(BUILD_PYTHON)
     include(cmake/pybind11.cmake)
 endif()
 
-if(BUILD_READER_SMOKE)
+if(BUILD_READER_SMOKE OR BUILD_PYTHON)
     find_package(OpenCV REQUIRED COMPONENTS core imgproc)
     include(cmake/spdlog.cmake)
     include(cmake/fmt.cmake)

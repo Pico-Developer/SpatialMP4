@@ -26,6 +26,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <map>
 #include <unordered_map>
 #include <opencv2/opencv.hpp>
 #include "utilities/SyncPose.hpp"
@@ -126,6 +127,10 @@ class SPATIALMP4_EXPORT Reader {
   camera_intrinsics GetDepthIntrinsics() const { return depth_intrinsics_; }
   camera_extrinsics GetDepthExtrinsics() const { return depth_extrinsics_; }
   std::vector<pose_frame> GetPoseFrames() const { return pose_frames_.getAllPose(); }
+  std::vector<std::string> ListTimedMetadataTracks() const;
+  std::vector<pose_frame> GetRigidPoseFrames(const std::string& track_id) const;
+  std::vector<hand_joints_frame> GetHandJointFrames(const std::string& track_id) const;
+  std::vector<controller_input_frame> GetControllerInputFrames(const std::string& track_id) const;
   int GetRgbKeyframeIndex() const { return keyframe_rgb_idx_; }
   int GetDepthKeyframeIndex() const { return keyframe_depth_idx_; }
   bool IsRgbDistorted() const { return is_rgb_distorted_; }
@@ -149,6 +154,9 @@ class SPATIALMP4_EXPORT Reader {
 
  protected:
   void LoadAllPoseData(int frame_id);
+  void LoadAllRigidPoseData(int frame_id, const std::string& track_id, bool mirror_to_legacy_head);
+  void LoadAllHandJointsData(int frame_id, const std::string& track_id);
+  void LoadAllControllerInputData(int frame_id, const std::string& track_id);
   void ParseDepthFrame(const AVPacket& pkt, depth_frame& depth_frame, bool raw_head_pose = false);
   void ParseRgbFrame(const AVPacket& pkt, rgb_frame& rgb_frame, bool skip = false);
 
@@ -166,6 +174,12 @@ class SPATIALMP4_EXPORT Reader {
   const AVCodec* rgb_codec_;
   AVFrame* rgb_frame_;
 
+  // Depth decoder. Only allocated for compressed depth tracks (e.g. FFV1);
+  // legacy raw1 depth keeps these null and is copied straight from the packet.
+  AVCodecContext* depth_codec_ctx_ = nullptr;
+  const AVCodec* depth_codec_ = nullptr;
+  AVFrame* depth_frame_av_ = nullptr;
+
   // media data info
   bool has_rgb_;
   int rgb_frame_id_;
@@ -173,6 +187,10 @@ class SPATIALMP4_EXPORT Reader {
   int depth_frame_id_;
   bool has_pose_;
   int pose_frame_id_;
+  std::vector<int> timed_metadata_frame_ids_;
+  std::unordered_map<int, std::string> rigid_pose_stream_ids_;
+  std::unordered_map<int, std::string> hand_joints_stream_ids_;
+  std::unordered_map<int, std::string> controller_input_stream_ids_;
   bool has_audio_;
   int audio_frame_id_;
   int audio_2_frame_id_;
@@ -210,6 +228,9 @@ class SPATIALMP4_EXPORT Reader {
 
   // media data
   Utilities::SynchronizedQueue<pose_frame> pose_frames_;
+  std::map<std::string, std::vector<pose_frame>> rigid_pose_tracks_;
+  std::map<std::string, std::vector<hand_joints_frame>> hand_joints_tracks_;
+  std::map<std::string, std::vector<controller_input_frame>> controller_input_tracks_;
   double find_pose_distance_ = 0.001;
   Utilities::SynchronizedQueue<int64_t> rgb_frame_pts_queue_;
 };

@@ -611,6 +611,9 @@ AVStream* AddPoseStream(AVFormatContext* format_context, int64_t track_base_time
   codecpar->codec_id = AV_CODEC_ID_NONE;
   codecpar->codec_tag = MKTAG('m', 'e', 't', 't');
 
+  // Identity in handler_name survives the mp4 round-trip; see reader.cc
+  // ParseSpatialHandler. The plain metadata below does not always survive.
+  av_dict_set(&stream->metadata, "handler_name", "spatialmp4:rigid_pose:head", 0);
   av_dict_set_int(&stream->metadata, "pose_coordinate", 1, 0);
   av_dict_set_int(&stream->metadata, "data_accuracy", 2, 0);
   av_dict_set(&stream->metadata, "pose_position", "head", 0);

@@ -116,6 +116,42 @@ PYBIND11_MODULE(spatialmp4, m) {
         return ss.str();
       });
 
+  py::class_<SpatialML::hand_joint>(m, "HandJoint")
+      .def(py::init<>())
+      .def_readwrite("joint_id", &SpatialML::hand_joint::joint_id)
+      .def_readwrite("flags", &SpatialML::hand_joint::flags)
+      .def_readwrite("radius_m", &SpatialML::hand_joint::radius_m)
+      .def_readwrite("x", &SpatialML::hand_joint::x)
+      .def_readwrite("y", &SpatialML::hand_joint::y)
+      .def_readwrite("z", &SpatialML::hand_joint::z)
+      .def_readwrite("qx", &SpatialML::hand_joint::qx)
+      .def_readwrite("qy", &SpatialML::hand_joint::qy)
+      .def_readwrite("qz", &SpatialML::hand_joint::qz)
+      .def_readwrite("qw", &SpatialML::hand_joint::qw);
+
+  py::class_<SpatialML::hand_joints_frame>(m, "HandJointsFrame")
+      .def(py::init<>())
+      .def_readwrite("timestamp", &SpatialML::hand_joints_frame::timestamp)
+      .def_readwrite("track_id", &SpatialML::hand_joints_frame::track_id)
+      .def_readwrite("joints", &SpatialML::hand_joints_frame::joints);
+
+  py::class_<SpatialML::controller_input_frame>(m, "ControllerInputFrame")
+      .def(py::init<>())
+      .def_readwrite("timestamp", &SpatialML::controller_input_frame::timestamp)
+      .def_readwrite("track_id", &SpatialML::controller_input_frame::track_id)
+      .def_readwrite("packet_type", &SpatialML::controller_input_frame::packet_type)
+      .def_readwrite("controller", &SpatialML::controller_input_frame::controller)
+      .def_readwrite("available_mask", &SpatialML::controller_input_frame::available_mask)
+      .def_readwrite("pressed_mask", &SpatialML::controller_input_frame::pressed_mask)
+      .def_readwrite("touched_mask", &SpatialML::controller_input_frame::touched_mask)
+      .def_readwrite("changed_mask", &SpatialML::controller_input_frame::changed_mask)
+      .def_readwrite("trigger_value", &SpatialML::controller_input_frame::trigger_value)
+      .def_readwrite("grip_value", &SpatialML::controller_input_frame::grip_value)
+      .def_readwrite("thumbstick_x", &SpatialML::controller_input_frame::thumbstick_x)
+      .def_readwrite("thumbstick_y", &SpatialML::controller_input_frame::thumbstick_y)
+      .def_readwrite("trackpad_x", &SpatialML::controller_input_frame::trackpad_x)
+      .def_readwrite("trackpad_y", &SpatialML::controller_input_frame::trackpad_y);
+
   // Bind rgb_frame struct
   py::class_<SpatialML::rgb_frame>(m, "RGBFrame")
       .def(py::init<>())
@@ -209,6 +245,10 @@ PYBIND11_MODULE(spatialmp4, m) {
       .def("get_depth_intrinsics", &SpatialML::Reader::GetDepthIntrinsics)
       .def("get_depth_extrinsics", &SpatialML::Reader::GetDepthExtrinsics)
       .def("get_pose_frames", &SpatialML::Reader::GetPoseFrames)
+      .def("list_timed_metadata_tracks", &SpatialML::Reader::ListTimedMetadataTracks)
+      .def("get_rigid_pose_frames", &SpatialML::Reader::GetRigidPoseFrames)
+      .def("get_hand_joint_frames", &SpatialML::Reader::GetHandJointFrames)
+      .def("get_controller_input_frames", &SpatialML::Reader::GetControllerInputFrames)
       .def("get_rgb_keyframe_index", &SpatialML::Reader::GetRgbKeyframeIndex)
       .def("get_depth_keyframe_index", &SpatialML::Reader::GetDepthKeyframeIndex)
       .def("is_rgb_distorted", &SpatialML::Reader::IsRgbDistorted)

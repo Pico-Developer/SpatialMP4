@@ -40,6 +40,16 @@ int main(int argc, char** argv) {
     std::cout << "reader loaded RGB " << rgb.left_rgb.cols << "x" << rgb.left_rgb.rows << " per eye, depth "
               << depth.depth.cols << "x" << depth.depth.rows << ", pose samples " << reader.GetPoseFrames().size()
               << "\n";
+
+    // Multi-track report: confirm the reader classifies controller / hand /
+    // input mett tracks by metadata, not just the legacy single head pose.
+    const std::vector<std::string> tracks = reader.ListTimedMetadataTracks();
+    std::cout << "timed metadata tracks (" << tracks.size() << "):\n";
+    for (const std::string& track_id : tracks) {
+      std::cout << "  - " << track_id << ": rigid_pose=" << reader.GetRigidPoseFrames(track_id).size()
+                << " hand_joints=" << reader.GetHandJointFrames(track_id).size()
+                << " controller_input=" << reader.GetControllerInputFrames(track_id).size() << "\n";
+    }
   } catch (const std::exception& error) {
     std::cerr << "spatialmp4_reader_smoke failed: " << error.what() << "\n";
     return 1;

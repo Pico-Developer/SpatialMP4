@@ -247,7 +247,7 @@ index fe6b259561..03d1d8a298 100644
      if (track->mode == MODE_MOV &&
         (track->par->codec_id == AV_CODEC_ID_V410 || track->par->codec_id == AV_CODEC_ID_V210))
          avio_wb16(pb, 0x18);
-@@ -2853,6 +3040,16 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
+@@ -2853,6 +3040,24 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
      } else
          avio_wb16(pb, 0xffff); /* Reserved */
  
@@ -260,11 +260,19 @@ index fe6b259561..03d1d8a298 100644
 +        mov_write_dstr_tag(pb, track);
 +        mov_write_tbtm_tag(pb, track);
 +    }
++    if (track->par->codec_id == AV_CODEC_ID_FFV1){
++        mov_write_hfov_tag_ext(pb, track);
++        mov_write_vfov_tag(pb, track);
++        mov_write_ecam_tag(pb, track);
++        mov_write_icam_tag(pb, track);
++        mov_write_dstr_tag(pb, track);
++        mov_write_tbtm_tag(pb, track);
++    }
 +
      if (track->tag == MKTAG('m','p','4','v'))
          mov_write_esds_tag(pb, track);
      else if (track->par->codec_id == AV_CODEC_ID_H263)
-@@ -2871,6 +3068,11 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
+@@ -2871,6 +3076,11 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
              if (ret < 0)
                  av_log(mov->fc, AV_LOG_WARNING, "Not writing 'lhvC' atom for multilayer stream.\n");
          }
@@ -276,7 +284,7 @@ index fe6b259561..03d1d8a298 100644
      } else if (track->par->codec_id == AV_CODEC_ID_VVC)
          mov_write_vvcc_tag(pb, track);
      else if (track->par->codec_id == AV_CODEC_ID_H264 && !TAG_IS_AVCI(track->tag)) {
-@@ -3152,6 +3354,8 @@ static int mov_write_stsd_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContext
+@@ -3152,6 +3362,8 @@ static int mov_write_stsd_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContext
          ret = mov_write_tmcd_tag(pb, track);
      else if (track->par->codec_tag == MKTAG('g','p','m','d'))
          ret = mov_write_gpmd_tag(pb, track);
