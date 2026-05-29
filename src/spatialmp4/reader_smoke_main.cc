@@ -41,6 +41,16 @@ int main(int argc, char** argv) {
               << depth.depth.cols << "x" << depth.depth.rows << ", pose samples " << reader.GetPoseFrames().size()
               << "\n";
 
+    // Depth sanity: print the parsed depth intrinsics (sourced from the ICAM
+    // box, which the patched mov demuxer must surface for FFV1 tracks too) and
+    // the metric depth range of the first frame, confirming FFV1 depth decodes
+    // to real metres rather than garbage.
+    const SpatialML::camera_intrinsics di = reader.GetDepthIntrinsics();
+    double dmin = 0.0, dmax = 0.0;
+    cv::minMaxLoc(depth.depth, &dmin, &dmax);
+    std::cout << "depth intrinsics fx=" << di.fx << " fy=" << di.fy << " cx=" << di.cx << " cy=" << di.cy
+              << " | depth metres min=" << dmin << " max=" << dmax << "\n";
+
     // Multi-track report: confirm the reader classifies controller / hand /
     // input mett tracks by metadata, not just the legacy single head pose.
     const std::vector<std::string> tracks = reader.ListTimedMetadataTracks();
