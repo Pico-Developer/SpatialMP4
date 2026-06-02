@@ -61,6 +61,55 @@ class CameraCalibration:
 UNITY_FROM_GODOT = np.diag([1.0, 1.0, -1.0])
 
 
+def _load_head_poses(session_dir: Path) -> List[Dict[str, Any]]:
+    """Resolve head-pose records for the session.
+
+    Prefers the legacy `poses/head.jsonl` sidecar when present (older
+    captures and runs with `save_head_pose_sidecar=true`). Otherwise reads
+    the mp4 `mett:head` rigid_pose track directly via read_mett_pose; the
+    session's `manifest.json` carries the Godot-ticks-µs anchor we need to
+    fold mp4 PTS back into the absolute domain `interpolate_head_pose`
+    expects (matching what head.jsonl used to do bit-for-bit).
+    """
+    sidecar = session_dir / "poses" / "head.jsonl"
+    if sidecar.exists():
+        return _read_jsonl(sidecar)
+
+    # Locate the mp4 the session was packed into. The Godot capture app writes
+    # both <session_dir>/<id>.mp4 and <parent>/<id>.mp4; check both spots.
+    session_id = session_dir.name
+    candidates = [
+        session_dir.parent / f"{session_id}.mp4",
+        session_dir / f"{session_id}.mp4",
+    ]
+    mp4_path = next((p for p in candidates if p.is_file()), None)
+    if mp4_path is None:
+        raise AlignmentError(
+            f"No head.jsonl sidecar and no <session>/<id>.mp4 found at "
+            f"any of: {[str(p) for p in candidates]}"
+        )
+
+    manifest_path = session_dir / "manifest.json"
+    session_start_us = 0
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text())
+            session_start_us = int(manifest.get("session_start_ticks_us", 0))
+        except (json.JSONDecodeError, ValueError):
+            session_start_us = 0
+
+    # Import lazily so installations that don't keep read_mett_pose.py adjacent
+    # still trigger a sensible error message at first use.
+    try:
+        from read_mett_pose import read_head_poses  # type: ignore
+    except ImportError as exc:  # pragma: no cover
+        raise AlignmentError(
+            "Cannot resolve head pose: head.jsonl is missing and "
+            "read_mett_pose.py (SpatialMP4/scripts) is not importable: %s" % exc
+        )
+    return read_head_poses(mp4_path, session_start_godot_ticks_us=session_start_us)
+
+
 def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
     if not path.exists():
         raise AlignmentError("Missing required input: {}".format(path))
@@ -552,7 +601,7 @@ def align_frame(
         load_rgb_frames(session_dir, eye), depth_frame, max_pair_delta_ns
     )
     head_pose = interpolate_head_pose(
-        _read_jsonl(session_dir / "poses" / "head.jsonl"), rgb_frame.timestamp_ns, max_pose_gap_ns
+        _load_head_poses(session_dir), rgb_frame.timestamp_ns, max_pose_gap_ns
     )
     rgb = read_yuv420_rgb(rgb_frame)
     if rgb_frame.width != calibration.width or rgb_frame.height != calibration.height:
