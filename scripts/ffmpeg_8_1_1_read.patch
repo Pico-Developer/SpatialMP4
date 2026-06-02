@@ -35,28 +35,47 @@ diff --git a/libavformat/mov.c b/libavformat/mov.c
 index 222d79ec1f..96111bebac 100644
 --- a/libavformat/mov.c
 +++ b/libavformat/mov.c
-@@ -87,6 +87,10 @@ typedef struct MOVParseTableEntry {
+@@ -87,6 +87,11 @@ typedef struct MOVParseTableEntry {
  static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom);
  static int mov_read_mfra(MOVContext *c, AVIOContext *f);
  static void mov_free_stream_context(AVFormatContext *s, AVStream *st);
 +static int mov_read_icam(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // camera intrinsics
 +static int mov_read_ecam(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // camera extrinsic
 +static int mov_read_dstr(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // distortion
-+static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // timebase
++static int mov_read_tbtm(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // unix-epoch us anchor for mp4 PTS=0
++static int mov_read_tbgt(MOVContext *c, AVIOContext *pb, MOVAtom atom);        // Godot-ticks us anchor for mp4 PTS=0
  
  static int mov_metadata_track_or_disc_number(MOVContext *c, AVIOContext *pb,
                                               unsigned len, const char *key)
-@@ -2939,6 +2943,17 @@ static int mov_parse_stsd_data(MOVContext *c, AVIOContext *pb,
+@@ -2939,6 +2944,35 @@ static int mov_parse_stsd_data(MOVContext *c, AVIOContext *pb,
                  }
              }
          }
 +    } else if (st->codecpar->codec_tag == MKTAG('m','e','t','t')) {
-+        if (size < 20) {
++        if (size < 2) {
 +            avio_skip(pb, size);
 +        } else {
-+            char mime[20];
-+            size -= avio_get_str(pb, size, mime, 20);
-+            avio_skip(pb, size);
++            // ISO BMFF mett sample entry has two null-terminated strings
++            // (ContentEncoding, MimeFormat) followed by optional child boxes.
++            // mov_write_mett_tag writes both copies plus a tbtm timebase box.
++            // The buffers must be large enough to hold the full mime string
++            // (currently "application/x-spatialmp4-*"), otherwise
++            // avio_get_str truncates the in-buffer copy but only advances pb
++            // by buf_size, leaving the cursor mid-string and corrupting any
++            // subsequent box walk.
++            char content_encoding[256];
++            char mime[256];
++            size -= avio_get_str(pb, size, content_encoding, sizeof(content_encoding));
++            size -= avio_get_str(pb, size, mime, sizeof(mime));
++            // Walk remaining child atoms (tbtm and any future per-track
++            // metadata) through the default parse table. Without this loop
++            // mov_write_mett_tag's tbtm box would be silently skipped, and
++            // downstream tools could not recover the writer's PTS anchor
++            // from mett streams without help from sidecar files.
++            if (size > 0) {
++                MOVAtom child = { .type = MKTAG('m','e','t','t'), .size = size };
++                mov_read_default(c, pb, child);
++            }
 +            if (strstr(mime, "disparity") != NULL) {
 +                st->codecpar->codec_id = AV_CODEC_ID_METT_DISPARITY;
 +            }
@@ -64,7 +83,7 @@ index 222d79ec1f..96111bebac 100644
      } else {
          /* other codec type, just skip (rtp, mp4s ...) */
          avio_skip(pb, size);
-@@ -9640,6 +9655,10 @@ static const MOVParseTableEntry mov_default_parse_table[] = {
+@@ -9640,6 +9674,11 @@ static const MOVParseTableEntry mov_default_parse_table[] = {
  #if CONFIG_IAMFDEC
  { MKTAG('i','a','c','b'), mov_read_iacb },
  #endif
@@ -72,10 +91,11 @@ index 222d79ec1f..96111bebac 100644
 +{ MKTAG('e','c','a','m'), mov_read_ecam },
 +{ MKTAG('d','s','t','r'), mov_read_dstr },
 +{ MKTAG('t','b','t','m'), mov_read_tbtm },
++{ MKTAG('t','b','g','t'), mov_read_tbgt },
  { MKTAG('s','r','a','t'), mov_read_srat },
  { 0, NULL }
  };
-@@ -9662,6 +9681,9 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+@@ -9662,6 +9701,9 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
          int (*parse)(MOVContext*, AVIOContext*, MOVAtom) = NULL;
          a.size = avio_rb32(pb);
          a.type = avio_rl32(pb);
@@ -85,7 +105,7 @@ index 222d79ec1f..96111bebac 100644
          if (avio_feof(pb))
              break;
          if (((a.type == MKTAG('f','r','e','e') && c->moov_retry) ||
-@@ -9766,6 +9788,255 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+@@ -9766,6 +9808,275 @@ static int mov_read_default(MOVContext *c, AVIOContext *pb, MOVAtom atom)
      return 0;
  }
  
@@ -335,6 +355,26 @@ index 222d79ec1f..96111bebac 100644
 +    char timebase_str[32];
 +    snprintf(timebase_str, sizeof(timebase_str), "%ld", timebase);
 +    av_dict_set(&st->metadata, "timebase", timebase_str, 0);
++    return 0;
++}
++
++// Paired with mov_write_tbgt_tag: surfaces the writer's track_base_godot_ticks_us
++// (== first_pts_us_writer_) anchor as a stream-metadata tag of the same name.
++// Downstream tools that previously needed android_timebase.json's
++// session_start_godot_ticks_us anchor can now read this single tag from any
++// stream (RGB, depth, or any mett track) and reconstruct absolute Godot-
++// ticks-ns timestamps without any sidecar file.
++static int mov_read_tbgt(MOVContext *c, AVIOContext *pb, MOVAtom atom)
++{
++    if (!c || !c->fc) {
++        av_log(NULL, AV_LOG_ERROR, "Invalid context for TBGT box\n");
++        return AVERROR_INVALIDDATA;
++    }
++    uint64_t godot_ticks_us = avio_rb64(pb);
++    AVStream *st = c->fc->streams[c->fc->nb_streams-1];
++    char buf[32];
++    snprintf(buf, sizeof(buf), "%ld", godot_ticks_us);
++    av_dict_set(&st->metadata, "track_base_godot_ticks_us", buf, 0);
 +    return 0;
 +}
 +
