@@ -1,4 +1,4 @@
-#include "mp4writer/write.h"
+#include "spatialmp4/writer.h"
 
 
 using namespace std;
@@ -89,7 +89,7 @@ void MP4Writer::writeSample(){
 
 }
 
-void MP4Writer::addTrack(char* mime_type){
+void MP4Writer::addTrack(const char* mime_type){
     if (fmt_ctx) {
         // raw1 track
         AVStream *stream1 = avformat_new_stream(fmt_ctx, NULL);
@@ -176,4 +176,3 @@ MP4Writer::~MP4Writer() {
 }
 
    using namespace std;
-

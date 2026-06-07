@@ -9,6 +9,11 @@ import rerun as rr
 import rerun.blueprint as rrb
 
 
+DEPTH_POINT_FILL_RATIO = 3.0
+DEPTH_RANGE_METERS = [0.2, 5.0]
+RGB_OVERLAY_OPACITY = 0.65
+
+
 def pico_pose_to_open3d(extrinsic):
     extrinsic = np.array(extrinsic, dtype=np.float64, copy=True)
     convert = np.array([
@@ -92,7 +97,15 @@ def main(
             rrb.Spatial2DView(
                 name="RGB & Depth",
                 origin="world/camera/image",
-                overrides={"world/camera/image/rgb": rr.Image.from_fields(opacity=0.5)},
+                contents=["world/camera/image/rgb", "world/camera/image/depth"],
+                overrides={
+                    "world/camera/image/rgb": rr.Image.from_fields(opacity=RGB_OVERLAY_OPACITY, draw_order=0),
+                    "world/camera/image/depth": rr.DepthImage.from_fields(
+                        depth_range=DEPTH_RANGE_METERS,
+                        point_fill_ratio=DEPTH_POINT_FILL_RATIO,
+                        draw_order=1,
+                    ),
+                },
             ),
             rrb.Tabs(
                 rrb.Spatial2DView(name="RGB", origin="world/camera/image", contents="world/camera/image/rgb"),
@@ -167,7 +180,7 @@ def main(
         extrinsic = pico_pose_to_open3d(extrinsic)
         extrinsic[:3, :3] = ensure_right_handed_rotation(extrinsic[:3, :3])
 
-        rr.set_time_seconds("time", timestamp)
+        rr.set_time("time", duration=timestamp)
         rr.log("world/xyz", rr.Arrows3D(vectors=[[1, 0, 0], [0, 1, 0], [0, 0, 1]], colors=[[255, 0, 0], [0, 255, 0], [0, 0, 255]]))
         rr.log("world/camera/image", rr.Pinhole(
             resolution=[width, height],
@@ -182,9 +195,17 @@ def main(
         if rgb_only:
             rr.log("world/camera/image/rgb", rr.Image(frame_rgb.left_rgb, color_model="BGR").compress(jpeg_quality=95))
         else:
-            rr.log("world/camera/image/depth", rr.DepthImage(depth_np, meter=1.0))
             if not depth_only:
                 rr.log("world/camera/image/rgb", rr.Image(rgbd.rgb, color_model="BGR").compress(jpeg_quality=95))
+            rr.log(
+                "world/camera/image/depth",
+                rr.DepthImage(
+                    depth_np,
+                    meter=1.0,
+                    depth_range=DEPTH_RANGE_METERS,
+                    point_fill_ratio=DEPTH_POINT_FILL_RATIO,
+                ),
+            )
 
         processed += 1
         if topk is not None and processed >= topk:

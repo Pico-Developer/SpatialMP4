@@ -1,5 +1,5 @@
 #include <iostream>
-#include "mp4writer/write.h"
+#include "spatialmp4/writer.h"
 
 int main() {
     std::cout << "Hello, World!" << std::endl;

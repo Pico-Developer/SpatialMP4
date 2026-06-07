@@ -1,4 +1,4 @@
-#include "mp4writer/packet_muxer.h"
+#include "spatialmp4/packet_muxer.h"
 
 #include <algorithm>
 #include <cerrno>

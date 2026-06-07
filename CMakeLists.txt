@@ -52,8 +52,8 @@ set(SRC
     # ./src/spatialmp4/utilities/OpencvUtils.cc
     # ./src/spatialmp4/utils.cc
     # ./src/spatialmp4/reader.cc
-    ./src/mp4writer/write.cc
-    ./src/mp4writer/packet_muxer.cc
+    ./src/spatialmp4/writer.cc
+    ./src/spatialmp4/packet_muxer.cc
 )
 
 add_library(${CMAKE_PROJECT_NAME}_lib STATIC ${SRC})
@@ -177,7 +177,7 @@ if(BUILD_TESTING)
     # )
 
     add_executable(test_writer
-        ./src/mp4writer/main.cc
+        ./src/spatialmp4/writer_main.cc
     )
     
     target_link_libraries(test_writer PUBLIC
@@ -185,7 +185,7 @@ if(BUILD_TESTING)
     )
 
     add_executable(spatialmp4_packet_muxer
-        ./src/mp4writer/packet_muxer_main.cc
+        ./src/spatialmp4/packet_muxer_main.cc
     )
 
     target_link_libraries(spatialmp4_packet_muxer PUBLIC

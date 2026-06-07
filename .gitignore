@@ -65,3 +65,5 @@ dist/*
 examples/python/view_control.pkl
 video/*.mp4
 !video/test.mp4
+
+conductor.log

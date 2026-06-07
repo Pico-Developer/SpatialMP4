@@ -544,6 +544,17 @@ M4: Multi-pose/hand extension
 - The FOV-derived depth intrinsics are supported; depth-to-head extrinsics remain identity-marked until device calibration is captured and must be replaced for accurate RGBD reprojection.
 - Camera2 vendor-tag/extrinsic conventions must be empirically validated against reprojection.
 - `scripts/godot_depth_rgb_align.py` performs diagnostic direct reprojection from Environment Depth into a selected Camera2 RGB view. It pairs `runtime_display_time_ns` with Camera2 `camera_sensor_timestamp_ns` when present, uses the captured inverse projection-view matrix, composes RGB lens pose with interpolated head pose, rejects unmodelled nonzero RGB distortion by default, and emits an aligned-depth array plus visual overlay/report.
+- The `rgb_extrinsics` field written into the mp4 by this chain is the
+  **raw Camera2 `lens_pose_translation/rotation` packed into a 4×4
+  matrix via the naïve quaternion → matrix conversion** — it is *not*
+  a ready-to-use RGB-camera-to-IMU SE(3). Consumers must run the Quest
+  3 Camera2-to-Unity conversion (see
+  [`docs/rgb_extrinsics_conventions.md`](rgb_extrinsics_conventions.md)
+  and `_openquest_head_from_camera` in `scripts/godot_depth_rgb_align.py`)
+  before composing it with the head pose. The field name and layout are
+  preserved for cross-device compatibility (Pico writes a different
+  semantic in the same slot); device-specific dispatch is the consumer's
+  responsibility.
 - On-device HEVC plus depth readback plus MP4 muxing may hit thermal and IO limits.
 - Current SpatialMP4 writer is a demo; production muxing needs the encoder patch path or a new writer.
 

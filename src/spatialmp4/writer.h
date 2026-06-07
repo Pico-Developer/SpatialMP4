@@ -19,7 +19,7 @@ public:
     MP4Writer();
     ~MP4Writer();
     int Write(const std::string& input_file, const std::string& output_file);
-    void addTrack(char* mime_type);
+    void addTrack(const char* mime_type);
     void closeFile();
     void writeSample();
 private:

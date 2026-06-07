@@ -118,8 +118,23 @@ class SPATIALMP4_EXPORT Reader {
   int GetRgbWidth() const { return rgb_width_; }
   int GetRgbHeight() const { return rgb_height_; }
   camera_intrinsics GetRgbIntrinsicsLeft() const { return rgb_intrinsics_left_; }
+  /// Left RGB camera extrinsics, semantics are **writer-specific**.
+  ///
+  /// - Pico legacy chain: a ready-to-use RGB-camera-frame → IMU SE(3).
+  /// - Godot Quest 3 live chain: the *raw* Android Camera2
+  ///   ``lens_pose_translation`` and ``lens_pose_rotation`` packed into
+  ///   a 4×4 via a naïve quaternion→matrix conversion. Consumers must
+  ///   run the Quest 3 conversion (negate quat X/Y, transpose, right-
+  ///   multiply by diag(1,-1,-1), negate translation Z) before use, or
+  ///   risk a ~15° tilt bias in any depth/RGB alignment.
+  ///
+  /// See [`docs/rgb_extrinsics_conventions.md`](rgb_extrinsics_conventions.md)
+  /// for the detection rules and the full conversion code.
   camera_extrinsics GetRgbExtrinsicsLeft() const { return rgb_extrinsics_left_; }
   camera_intrinsics GetRgbIntrinsicsRight() const { return rgb_intrinsics_right_; }
+  /// Right RGB camera extrinsics. Same per-writer convention as
+  /// ``GetRgbExtrinsicsLeft()`` — see that comment and the
+  /// ``rgb_extrinsics_conventions.md`` doc.
   camera_extrinsics GetRgbExtrinsicsRight() const { return rgb_extrinsics_right_; }
   float GetDepthFPS() const { return depth_fps_; }
   int GetDepthWidth() const { return depth_width_; }
