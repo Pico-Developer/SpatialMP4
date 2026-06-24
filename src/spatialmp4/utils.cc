@@ -82,7 +82,7 @@ std::unordered_map<int, StreamType> GetStreamTypeInfo(AVFormatContext* pFormatCt
       stream_type_info[i] = MEDIA_TYPE_AUDIO;
     } else if (codec_name == "opus") {
       stream_type_info[i] = MEDIA_TYPE_AUDIO_2;
-    } else if (codec_name == "hevc") {
+    } else if (codec_name == "hevc" || codec_name == "h264") {
       stream_type_info[i] = MEDIA_TYPE_RGB;
     } else if (codec_name == "disparity") {
       stream_type_info[i] = MEDIA_TYPE_DISPARITY;
