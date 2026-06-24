@@ -91,7 +91,7 @@ build_install_ffmpeg() {
     make distclean || true
 
     # EXTRA_CONFIG="--enable-shared --disable-static"
-    EXTRA_CONFIG="--enable-static --disable-shared --enable-pic --disable-x86asm --disable-asm"
+    EXTRA_CONFIG="--enable-static --disable-shared --enable-pic --disable-x86asm --disable-asm --pkg-config-flags=--static"
 
     # if [[ "$(uname)" == "Darwin" ]];then
     #     EXTRA_CONFIG="--enable-shared --disable-static"
