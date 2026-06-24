@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
     for (const std::string& track_id : tracks) {
       std::cout << "  - " << track_id << ": rigid_pose=" << reader.GetRigidPoseFrames(track_id).size()
                 << " hand_joints=" << reader.GetHandJointFrames(track_id).size()
+                << " body_joints=" << reader.GetBodyJointFrames(track_id).size()
                 << " controller_input=" << reader.GetControllerInputFrames(track_id).size() << "\n";
     }
   } catch (const std::exception& error) {

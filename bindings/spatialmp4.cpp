@@ -248,6 +248,9 @@ PYBIND11_MODULE(spatialmp4, m) {
       .def("list_timed_metadata_tracks", &SpatialML::Reader::ListTimedMetadataTracks)
       .def("get_rigid_pose_frames", &SpatialML::Reader::GetRigidPoseFrames)
       .def("get_hand_joint_frames", &SpatialML::Reader::GetHandJointFrames)
+      // Body-tracking joints (kind "body_joints"); frames reuse HandJointsFrame
+      // because the payload shares the count-driven HJNT layout.
+      .def("get_body_joint_frames", &SpatialML::Reader::GetBodyJointFrames)
       .def("get_controller_input_frames", &SpatialML::Reader::GetControllerInputFrames)
       .def("get_rgb_keyframe_index", &SpatialML::Reader::GetRgbKeyframeIndex)
       .def("get_depth_keyframe_index", &SpatialML::Reader::GetDepthKeyframeIndex)

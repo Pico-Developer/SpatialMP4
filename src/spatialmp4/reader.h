@@ -145,6 +145,10 @@ class SPATIALMP4_EXPORT Reader {
   std::vector<std::string> ListTimedMetadataTracks() const;
   std::vector<pose_frame> GetRigidPoseFrames(const std::string& track_id) const;
   std::vector<hand_joints_frame> GetHandJointFrames(const std::string& track_id) const;
+  /// Body-tracking joints (kind "body_joints", e.g. PICO XR_BD_body_tracking's
+  /// 24 joints). The payload shares the count-driven HJNT layout with hand
+  /// joints, so frames reuse the hand_joints_frame/hand_joint structs.
+  std::vector<hand_joints_frame> GetBodyJointFrames(const std::string& track_id) const;
   std::vector<controller_input_frame> GetControllerInputFrames(const std::string& track_id) const;
   int GetRgbKeyframeIndex() const { return keyframe_rgb_idx_; }
   int GetDepthKeyframeIndex() const { return keyframe_depth_idx_; }
@@ -171,6 +175,10 @@ class SPATIALMP4_EXPORT Reader {
   void LoadAllPoseData(int frame_id);
   void LoadAllRigidPoseData(int frame_id, const std::string& track_id, bool mirror_to_legacy_head);
   void LoadAllHandJointsData(int frame_id, const std::string& track_id);
+  void LoadAllBodyJointsData(int frame_id, const std::string& track_id);
+  // Shared HJNT-layout demux used by both the hand and body joint loaders.
+  void LoadAllJointFramesData(int frame_id, const std::string& track_id,
+                              std::map<std::string, std::vector<hand_joints_frame>>& tracks);
   void LoadAllControllerInputData(int frame_id, const std::string& track_id);
   void ParseDepthFrame(const AVPacket& pkt, depth_frame& depth_frame, bool raw_head_pose = false);
   void ParseRgbFrame(const AVPacket& pkt, rgb_frame& rgb_frame, bool skip = false);
@@ -205,6 +213,7 @@ class SPATIALMP4_EXPORT Reader {
   std::vector<int> timed_metadata_frame_ids_;
   std::unordered_map<int, std::string> rigid_pose_stream_ids_;
   std::unordered_map<int, std::string> hand_joints_stream_ids_;
+  std::unordered_map<int, std::string> body_joints_stream_ids_;
   std::unordered_map<int, std::string> controller_input_stream_ids_;
   bool has_audio_;
   int audio_frame_id_;
@@ -245,6 +254,7 @@ class SPATIALMP4_EXPORT Reader {
   Utilities::SynchronizedQueue<pose_frame> pose_frames_;
   std::map<std::string, std::vector<pose_frame>> rigid_pose_tracks_;
   std::map<std::string, std::vector<hand_joints_frame>> hand_joints_tracks_;
+  std::map<std::string, std::vector<hand_joints_frame>> body_joints_tracks_;
   std::map<std::string, std::vector<controller_input_frame>> controller_input_tracks_;
   double find_pose_distance_ = 0.001;
   Utilities::SynchronizedQueue<int64_t> rgb_frame_pts_queue_;

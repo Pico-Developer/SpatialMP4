@@ -95,6 +95,9 @@ std::string TimedMetadataKind(const AVStream* stream) {
   if (Contains(schema, "controller_input") || Contains(mime, "controller-input")) {
     return "controller_input";
   }
+  if (Contains(schema, "body_joints") || Contains(mime, "body-joints")) {
+    return "body_joints";
+  }
   if (Contains(schema, "hand_joints") || Contains(mime, "hand-joints")) {
     return "hand_joints";
   }
@@ -439,6 +442,11 @@ Reader::Reader(const std::string& filename, const std::string& log_level)
           const std::string track_id = TimedTrackId(stream, stream_index);
           if (kind == "hand_joints") {
             hand_joints_stream_ids_[stream_index] = track_id;
+          } else if (kind == "body_joints") {
+            // Body tracking joints (e.g. PICO XR_BD_body_tracking). Same
+            // count-driven HJNT payload as hand joints, own kind so the
+            // track never masquerades as a hand or a rigid pose.
+            body_joints_stream_ids_[stream_index] = track_id;
           } else if (kind == "controller_input") {
             controller_input_stream_ids_[stream_index] = track_id;
           } else {
@@ -635,6 +643,9 @@ Reader::Reader(const std::string& filename, const std::string& log_level)
   for (const auto& pair : hand_joints_stream_ids_) {
     LoadAllHandJointsData(pair.first, pair.second);
   }
+  for (const auto& pair : body_joints_stream_ids_) {
+    LoadAllBodyJointsData(pair.first, pair.second);
+  }
   for (const auto& pair : controller_input_stream_ids_) {
     LoadAllControllerInputData(pair.first, pair.second);
   }
@@ -670,6 +681,9 @@ std::vector<std::string> Reader::ListTimedMetadataTracks() const {
   for (const auto& pair : hand_joints_tracks_) {
     tracks.push_back(pair.first);
   }
+  for (const auto& pair : body_joints_tracks_) {
+    tracks.push_back(pair.first);
+  }
   for (const auto& pair : controller_input_tracks_) {
     tracks.push_back(pair.first);
   }
@@ -687,6 +701,14 @@ std::vector<pose_frame> Reader::GetRigidPoseFrames(const std::string& track_id) 
 std::vector<hand_joints_frame> Reader::GetHandJointFrames(const std::string& track_id) const {
   auto it = hand_joints_tracks_.find(track_id);
   if (it == hand_joints_tracks_.end()) {
+    return {};
+  }
+  return it->second;
+}
+
+std::vector<hand_joints_frame> Reader::GetBodyJointFrames(const std::string& track_id) const {
+  auto it = body_joints_tracks_.find(track_id);
+  if (it == body_joints_tracks_.end()) {
     return {};
   }
   return it->second;
@@ -991,6 +1013,17 @@ void Reader::LoadAllRigidPoseData(int frame_id, const std::string& track_id, boo
 }
 
 void Reader::LoadAllHandJointsData(int frame_id, const std::string& track_id) {
+  LoadAllJointFramesData(frame_id, track_id, hand_joints_tracks_);
+}
+
+void Reader::LoadAllBodyJointsData(int frame_id, const std::string& track_id) {
+  LoadAllJointFramesData(frame_id, track_id, body_joints_tracks_);
+}
+
+// HJNT-layout demux shared by hand and body joint tracks: 8-byte header
+// (magic + version + joint count) followed by count * 36-byte joint records.
+void Reader::LoadAllJointFramesData(int frame_id, const std::string& track_id,
+                                    std::map<std::string, std::vector<hand_joints_frame>>& tracks) {
   const AVStream* stream = pFormatCtx_->streams[frame_id];
   AVPacket pkt;
   while (av_read_frame(pFormatCtx_, &pkt) >= 0) {
@@ -1037,7 +1070,7 @@ void Reader::LoadAllHandJointsData(int frame_id, const std::string& track_id) {
         offset += 4;
         frame.joints.push_back(joint);
       }
-      hand_joints_tracks_[track_id].push_back(std::move(frame));
+      tracks[track_id].push_back(std::move(frame));
     }
     av_packet_unref(&pkt);
   }
