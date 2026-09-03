@@ -103,9 +103,7 @@ def generate_pcd(
     )
 
     while reader.has_next():
-        # rgbd = reader.load_rgbd(True)
-        rgb_frame, depth_frame = reader.load_both()
-        import ipdb; ipdb.set_trace()
+        rgbd = reader.load_rgbd(True)
 
         if topk is not None and reader.get_index() >= topk:
             break
